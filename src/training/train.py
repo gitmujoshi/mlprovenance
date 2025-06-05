@@ -87,6 +87,7 @@ def train_model():
     training_logs = []
     for epoch in range(len(history.history['accuracy'])):
         training_logs.append({
+            'epoch': epoch + 1,
             'accuracy': history.history['accuracy'][epoch],
             'loss': history.history['loss'][epoch],
             'val_accuracy': history.history['val_accuracy'][epoch],
@@ -116,10 +117,27 @@ def train_model():
     logger.info("Verifying training...")
     verifier = ProvenanceVerifier(provenance.provenance_dir)
     verification_report = verifier.generate_verification_report(model_dir / "model.keras")
-    
+
+    # Generate Merkle proofs for all components
+    merkle_proofs = {}
+    for comp in ["data", "model", "training"]:
+        comp_data = None
+        if comp == "data":
+            comp_data = provenance.data["data_provenance"]
+        elif comp == "model":
+            comp_data = provenance.data["model_provenance"]
+        elif comp == "training":
+            comp_data = provenance.data["training_provenance"]
+        merkle_proofs[comp] = provenance.get_provenance_proof(comp, comp_data)
+
     # Generate final report
-    from src.provenance.generate_final_report import generate_markdown_report
-    report_path = generate_markdown_report(provenance.provenance_dir, model_dir)
+    from src.provenance.generate_final_report import generate_final_report
+    report_path = generate_final_report(
+        provenance.provenance_dir,
+        model_dir / "model.keras",
+        verification_report=verification_report,
+        merkle_proofs=merkle_proofs
+    )
     logger.info(f"Final report generated at {report_path}")
 
 if __name__ == "__main__":

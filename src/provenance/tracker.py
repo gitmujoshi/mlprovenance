@@ -11,6 +11,7 @@ import numpy as np
 import hashlib
 import pickle
 import base64
+from .merkle_tree import MLProvenanceMerkleTree
 
 class ProvenanceTracker:
     def __init__(self, base_dir="artifacts"):
@@ -36,6 +37,9 @@ class ProvenanceTracker:
             "system_info": self._get_system_info(),
             "hashes": {}
         }
+        
+        # Initialize Merkle tree
+        self.merkle_tree = MLProvenanceMerkleTree()
     
     def _generate_hash(self, data):
         """Generate SHA-256 hash of the given data."""
@@ -120,11 +124,6 @@ class ProvenanceTracker:
         # Sort by layer name and weight type
         weights.sort(key=lambda x: (x[0], x[1]))
         
-        # Log some debug information
-        self.logger.debug(f"Number of weight tensors: {len(weights)}")
-        for layer_name, weight_type, w in weights:
-            self.logger.debug(f"Layer: {layer_name}, Type: {weight_type}, Shape: {w.shape}, Mean: {np.mean(w):.6f}")
-        
         # Generate hash using only the numpy arrays
         weights_hash = self._generate_hash([w[2] for w in weights])
         
@@ -175,13 +174,13 @@ class ProvenanceTracker:
         """Save provenance data to JSON file."""
         self.logger.info("Saving provenance data...")
         
-        # Generate overall provenance hash
-        overall_hash = self._generate_hash({
-            "data": self.data["data_provenance"],
-            "model": self.data["model_provenance"],
-            "training": self.data["training_provenance"]
-        })
-        self.data["hashes"]["overall"] = overall_hash
+        # Generate overall provenance hash using Merkle tree
+        root_hash = self.merkle_tree.track_training_run(
+            self.data["data_provenance"],
+            self.data["model_provenance"],
+            self.data["training_provenance"]
+        )
+        self.data["hashes"]["overall"] = root_hash
         
         # Save main provenance data
         with open(self.provenance_dir / "data.json", "w") as f:
@@ -196,9 +195,17 @@ class ProvenanceTracker:
                 "train_samples": self.data["data_provenance"]["train"]["samples"],
                 "test_samples": self.data["data_provenance"]["test"]["samples"]
             },
-            "provenance_hash": overall_hash
+            "provenance_hash": root_hash
         }
         with open(self.provenance_dir / "business_report.json", "w") as f:
             json.dump(business_report, f, indent=2)
         
-        self.logger.info("Provenance data saved successfully.") 
+        self.logger.info("Provenance data saved successfully.")
+    
+    def verify_component(self, component_type, component_data):
+        """Verify a specific component using Merkle tree."""
+        return self.merkle_tree.verify_component(component_type, component_data)
+    
+    def get_provenance_proof(self, component_type, component_data):
+        """Get a Merkle proof for a specific component."""
+        return self.merkle_tree.get_provenance_proof(component_type, component_data) 

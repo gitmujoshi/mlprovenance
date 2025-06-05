@@ -5,11 +5,13 @@ import tensorflow as tf
 import hashlib
 import numpy as np
 import base64
+from .merkle_tree import MLProvenanceMerkleTree
 
 class ProvenanceVerifier:
     def __init__(self, provenance_dir):
         self.provenance_dir = Path(provenance_dir)
         self.logger = logging.getLogger(__name__)
+        self.merkle_tree = MLProvenanceMerkleTree()
         
     def _generate_hash(self, data):
         """Generate SHA-256 hash of the given data."""
@@ -34,6 +36,13 @@ class ProvenanceVerifier:
         # Load provenance data
         with open(self.provenance_dir / "data.json", "r") as f:
             data = json.load(f)
+        
+        # Initialize Merkle tree with the stored data
+        self.merkle_tree.track_training_run(
+            data["data_provenance"],
+            data["model_provenance"],
+            data["training_provenance"]
+        )
         
         # Initialize verification results
         verification_results = {
@@ -67,12 +76,16 @@ class ProvenanceVerifier:
         """Verify data provenance."""
         self.logger.info("Verifying data provenance...")
         
+        # Verify using Merkle tree
+        data_valid = self.merkle_tree.verify_component('data', data["data_provenance"])
+        
         results = {
             "train": "train" in data["data_provenance"],
             "test": "test" in data["data_provenance"],
             "timestamp": "version" in data,
             "train_hash": "hash" in data["data_provenance"]["train"],
-            "test_hash": "hash" in data["data_provenance"]["test"]
+            "test_hash": "hash" in data["data_provenance"]["test"],
+            "merkle_verification": data_valid
         }
         
         return results
@@ -107,11 +120,15 @@ class ProvenanceVerifier:
         # Check that weights have changed during training
         weights_changed = weights_hash != stored_weights_hash
         
+        # Verify using Merkle tree
+        model_valid = self.merkle_tree.verify_component('model', data["model_provenance"])
+        
         results = {
             "model_hash_match": model_hash == stored_model_hash,
             "weights_changed": weights_changed,
             "model_exists": Path(model_path).exists(),
-            "architecture_verification": self._verify_model_architecture(model, data)
+            "architecture_verification": self._verify_model_architecture(model, data),
+            "merkle_verification": model_valid
         }
         
         return results
@@ -131,11 +148,15 @@ class ProvenanceVerifier:
         """Verify training provenance."""
         self.logger.info("Verifying training process...")
         
+        # Verify using Merkle tree
+        training_valid = self.merkle_tree.verify_component('training', data["training_provenance"])
+        
         results = {
             "test_accuracy_present": "final_accuracy" in data["training_provenance"]["final_metrics"],
             "test_loss_present": "final_loss" in data["training_provenance"]["final_metrics"],
             "privacy_metrics_present": "privacy_summary" in data["training_provenance"]["config"],
-            "training_hash_present": "hash" in data["training_provenance"]
+            "training_hash_present": "hash" in data["training_provenance"],
+            "merkle_verification": training_valid
         }
         
         return results

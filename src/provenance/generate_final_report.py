@@ -2,103 +2,96 @@ import json
 import logging
 from pathlib import Path
 import argparse
+import os
 
-def generate_markdown_report(provenance_dir, model_dir):
-    """Generate a markdown report from provenance data."""
-    logger = logging.getLogger(__name__)
-    logger.info("Generating markdown report...")
-    
-    # Load provenance data
-    with open(Path(provenance_dir) / "data.json", "r") as f:
-        data = json.load(f)
-    
-    # Load verification data
-    with open(Path(provenance_dir) / "verification.json", "r") as f:
-        verification = json.load(f)
-    
-    # Generate markdown content
-    markdown = f"""# MNIST Training Report
+def generate_final_report(provenance_dir, model_path, verification_report=None, merkle_proofs=None):
+    """
+    Generate a detailed markdown report for training, provenance, and Merkle verification.
+    """
+    provenance_dir = Path(provenance_dir)
+    report_path = provenance_dir / "final_report.md"
+    with open(provenance_dir / "data.json", "r") as f:
+        provenance_data = json.load(f)
 
-## Training Run Information
-- **Timestamp**: {data['version']}
-- **Model Location**: {model_dir}
-- **Overall Provenance Hash**: `{data['hashes']['overall']}`
+    # Section 1: Training Summary
+    training = provenance_data["training_provenance"]
+    training_logs = training.get("training_logs", [])
+    final_metrics = training.get("final_metrics", {})
+    training_section = [
+        "# Training Summary",
+        "",
+        f"**Epochs:** {training.get('config', {}).get('epochs', 'N/A')}",
+        f"**Batch Size:** {training.get('config', {}).get('batch_size', 'N/A')}",
+        f"**Validation Split:** {training.get('config', {}).get('validation_split', 'N/A')}",
+        f"**Final Accuracy:** {final_metrics.get('final_accuracy', 'N/A')}",
+        f"**Final Loss:** {final_metrics.get('final_loss', 'N/A')}",
+        "",
+        "## Training Logs",
+        "| Epoch | Accuracy | Loss | Val Accuracy | Val Loss |",
+        "|-------|----------|------|--------------|----------|",
+    ]
+    for log in training_logs:
+        training_section.append(f"| {log['epoch']} | {log['accuracy']} | {log['loss']} | {log['val_accuracy']} | {log['val_loss']} |")
 
-## Data Statistics
-- **Training Samples**: {data['data_provenance']['train']['samples']}
-- **Test Samples**: {data['data_provenance']['test']['samples']}
-- **Training Data Mean**: {data['data_provenance']['train']['mean']:.4f}
-- **Training Data Std**: {data['data_provenance']['train']['std']:.4f}
+    # Section 2: Provenance Details
+    hashes = provenance_data.get("hashes", {})
+    provenance_section = [
+        "# Provenance Details",
+        "",
+        "## Data Provenance",
+        f"- Train Hash: `{provenance_data['data_provenance'].get('train', {}).get('hash', 'N/A')}`",
+        f"- Test Hash: `{provenance_data['data_provenance'].get('test', {}).get('hash', 'N/A')}`",
+        "",
+        "## Model Provenance",
+        f"- Architecture Hash: `{provenance_data['model_provenance']['hashes'].get('architecture', 'N/A')}`",
+        f"- Weights Hash: `{provenance_data['model_provenance']['hashes'].get('weights', 'N/A')}`",
+        "",
+        "## Training Provenance",
+        f"- Training Hash: `{provenance_data['training_provenance'].get('hash', 'N/A')}`",
+        "",
+        "## Overall Hashes",
+    ]
+    for k, v in hashes.items():
+        provenance_section.append(f"- {k}: `{v}`")
 
-### Data Provenance
-- **Training Data Hash**: `{data['data_provenance']['train']['hash']}`
-- **Test Data Hash**: `{data['data_provenance']['test']['hash']}`
+    # Section 3: Merkle Tree and Proofs
+    merkle_section = [
+        "# Merkle Tree & Verification",
+        "",
+        f"**Merkle Root Hash:** `{hashes.get('overall', 'N/A')}`",
+        "",
+        "## Merkle Proofs",
+    ]
+    if merkle_proofs:
+        for comp, proof in merkle_proofs.items():
+            merkle_section.append(f"### Proof for {comp.capitalize()} Provenance:")
+            merkle_section.append("```")
+            merkle_section.append(json.dumps(proof, indent=2))
+            merkle_section.append("```")
+    else:
+        merkle_section.append("(Proofs not generated in this run)")
 
-## Model Architecture
-- **Trainable Parameters**: {data['model_provenance']['parameters']['trainable_params']}
-- **Optimizer**: {data['model_provenance']['parameters']['optimizer']['name']}
+    # Section 4: Verification Results
+    verification_section = [
+        "# Verification Results",
+        "",
+    ]
+    if verification_report:
+        verification_section.append("## Overall Status: " + ("✅ SUCCESS" if verification_report.get("overall_status") else "❌ FAILURE"))
+        verification_section.append("")
+        for key, results in verification_report.get("verification_results", {}).items():
+            verification_section.append(f"### {key.replace('_', ' ').title()}")
+            verification_section.append("```")
+            verification_section.append(json.dumps(results, indent=2))
+            verification_section.append("```")
+    else:
+        verification_section.append("(Verification not performed in this run)")
 
-### Model Provenance
-- **Architecture Hash**: `{data['model_provenance']['hashes']['architecture']}`
-- **Weights Hash**: `{data['model_provenance']['hashes']['weights']}`
-
-## Training Results
-- **Final Accuracy**: {data['training_provenance']['final_metrics']['final_accuracy']:.4f}
-- **Final Loss**: {data['training_provenance']['final_metrics']['final_loss']:.4f}
-
-### Training Logs
-{chr(10).join(f"- Epoch {i+1}: accuracy={log['accuracy']:.4f}, loss={log['loss']:.4f}, val_accuracy={log['val_accuracy']:.4f}, val_loss={log['val_loss']:.4f}" for i, log in enumerate(data['training_provenance'].get('training_logs', [])))}
-
-### Training Provenance
-- **Training Hash**: `{data['training_provenance']['hash']}`
-
-## Privacy Metrics
-- **Membership Inference Risk**: {data['training_provenance']['config']['privacy_summary']['membership_inference_risk']:.4f}
-- **Model Inversion Risk**: {data['training_provenance']['config']['privacy_summary']['model_inversion_risk']:.4f}
-- **Property Inference Risk**: {data['training_provenance']['config']['privacy_summary']['property_inference_risk']:.4f}
-
-## System Information
-- **Python Version**: {data['system_info']['python_version']}
-- **TensorFlow Version**: {data['system_info']['tensorflow_version']}
-- **Platform**: {data['system_info']['platform']['system']} {data['system_info']['platform']['release']}
-
-## Verification Results
-- **Overall Status**: {'✅ PASSED' if verification['overall_status'] else '❌ FAILED'}
-- **Verification Timestamp**: {verification['verification_timestamp']}
-
-### Data Verification
-- **Training Data**: {'✅' if verification['verification_results']['data_verification']['train'] else '❌'}
-- **Test Data**: {'✅' if verification['verification_results']['data_verification']['test'] else '❌'}
-- **Training Hash**: {'✅' if verification['verification_results']['data_verification']['train_hash'] else '❌'}
-- **Test Hash**: {'✅' if verification['verification_results']['data_verification']['test_hash'] else '❌'}
-
-### Model Verification
-- **Model Exists**: {'✅' if verification['verification_results']['model_verification']['model_exists'] else '❌'}
-- **Architecture Hash Match**: {'✅' if verification['verification_results']['model_verification']['model_hash_match'] else '❌'}
-- **Weights Changed During Training**: {'✅' if verification['verification_results']['model_verification']['weights_changed'] else '❌'}
-- **Layer Count Match**: {'✅' if verification['verification_results']['model_verification']['architecture_verification']['layer_count_match'] else '❌'}
-- **Parameter Count Match**: {'✅' if verification['verification_results']['model_verification']['architecture_verification']['parameter_count_match'] else '❌'}
-- **Optimizer Match**: {'✅' if verification['verification_results']['model_verification']['architecture_verification']['optimizer_match'] else '❌'}
-
-### Training Verification
-- **Test Accuracy Present**: {'✅' if verification['verification_results']['training_verification']['test_accuracy_present'] else '❌'}
-- **Test Loss Present**: {'✅' if verification['verification_results']['training_verification']['test_loss_present'] else '❌'}
-- **Privacy Metrics Present**: {'✅' if verification['verification_results']['training_verification']['privacy_metrics_present'] else '❌'}
-- **Training Hash Present**: {'✅' if verification['verification_results']['training_verification']['training_hash_present'] else '❌'}
-
-### Hash Verification
-- **Model Architecture Hash Match**: {'✅' if verification['verification_results']['hash_verification']['model_architecture_hash_match'] else '❌'}
-- **Model Weights Changed During Training**: {'✅' if verification['verification_results']['hash_verification']['model_weights_changed'] else '❌'}
-- **Training Hash Match**: {'✅' if verification['verification_results']['hash_verification']['training_hash_match'] else '❌'}
-- **Overall Hash Present**: {'✅' if verification['verification_results']['hash_verification']['overall_hash_present'] else '❌'}
-"""
-    
-    # Save markdown report
-    report_path = Path(provenance_dir) / "final_report.md"
+    # Combine all sections
+    report = "\n".join(training_section + [""] + provenance_section + [""] + merkle_section + [""] + verification_section)
     with open(report_path, "w") as f:
-        f.write(markdown)
-    
-    logger.info(f"Markdown report generated at {report_path}")
+        f.write(report)
+    print(f"INFO:src.provenance.generate_final_report:Markdown report generated at {report_path}")
     return report_path
 
 def main(args):
@@ -116,7 +109,7 @@ def main(args):
         raise ValueError(f"Model directory not found: {model_dir}")
     
     # Generate markdown report
-    report_path = generate_markdown_report(provenance_dir, model_dir)
+    report_path = generate_final_report(provenance_dir, model_dir)
     logger.info(f"Final report generated successfully at {report_path}")
 
 if __name__ == "__main__":
