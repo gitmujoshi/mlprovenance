@@ -9,6 +9,7 @@ This project demonstrates provenance tracking for a machine learning model train
 - Training process monitoring
 - Comprehensive verification system
 - Detailed reporting with markdown output
+- Merkle tree-based verification and proof generation
 
 ## Project Structure
 
@@ -18,11 +19,13 @@ mnist_provenance/
 │   ├── provenance/
 │   │   ├── tracker.py
 │   │   ├── verifier.py
+│   │   ├── merkle_tree.py
 │   │   └── generate_final_report.py
 │   └── training/
 │       └── train.py
 ├── scripts/
-│   └── run_training.sh
+│   ├── run_training.sh
+│   └── merkle_proof_demo.py
 ├── artifacts/
 │   ├── models/
 │   └── provenance/
@@ -51,6 +54,8 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Running the Training Script
+
 Run the training script:
 ```bash
 ./scripts/run_training.sh
@@ -59,7 +64,24 @@ Run the training script:
 This will:
 1. Train a model on the MNIST dataset
 2. Track all provenance information
-3. Generate a detailed report in the artifacts directory
+3. Generate a detailed report in the artifacts directory, including training metrics, provenance hashes, Merkle proofs, and verification results
+
+### Generating and Verifying Merkle Proofs
+
+You can generate and verify Merkle proofs for any tracked component (data, model, or training) using the provided script:
+
+```bash
+python scripts/merkle_proof_demo.py
+```
+
+This script will:
+- Find the latest provenance directory
+- Load the provenance data
+- Rebuild the Merkle tree for that run
+- Generate a Merkle proof for the selected component
+- Verify the proof against the Merkle root
+
+You can change the component type in the script to `'data'`, `'model'`, or `'training'` to generate and verify proofs for different components.
 
 ## Requirements
 
