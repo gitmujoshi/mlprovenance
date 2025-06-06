@@ -581,6 +581,343 @@ class SecurityManager:
         pass
 ```
 
+### 3.13 Privacy Budget Tracking
+
+#### 3.13.1 Privacy Budget Implementation
+```python
+class PrivacyBudgetTracker:
+    def __init__(self, target_epsilon, target_delta):
+        self.target_epsilon = target_epsilon
+        self.target_delta = target_delta
+        self.current_epsilon = 0.0
+        self.current_delta = target_delta
+        self.steps_taken = 0
+        self.budget_history = []
+        
+    def update_budget(self, noise_multiplier, batch_size, dataset_size):
+        """Update privacy budget using RDP (Renyi Differential Privacy) accounting."""
+        # Calculate privacy cost for this step
+        step_epsilon = self._calculate_step_epsilon(
+            noise_multiplier, 
+            batch_size, 
+            dataset_size
+        )
+        
+        # Update total privacy budget
+        self.current_epsilon = self._compose_epsilons(
+            self.current_epsilon, 
+            step_epsilon
+        )
+        
+        # Record budget usage
+        self.budget_history.append({
+            'step': self.steps_taken,
+            'epsilon': self.current_epsilon,
+            'delta': self.current_delta,
+            'noise_multiplier': noise_multiplier
+        })
+        
+        self.steps_taken += 1
+        return self._check_budget_exhaustion()
+    
+    def _calculate_step_epsilon(self, noise_multiplier, batch_size, dataset_size):
+        """Calculate privacy cost for a single step using RDP."""
+        # Implementation of RDP accounting
+        sampling_rate = batch_size / dataset_size
+        return self._rdp_to_eps(
+            self._compute_rdp(
+                sampling_rate,
+                noise_multiplier,
+                self.steps_taken
+            )
+        )
+    
+    def _check_budget_exhaustion(self):
+        """Check if privacy budget is exhausted."""
+        return {
+            'budget_exhausted': self.current_epsilon >= self.target_epsilon,
+            'remaining_budget': self.target_epsilon - self.current_epsilon,
+            'current_epsilon': self.current_epsilon,
+            'current_delta': self.current_delta
+        }
+```
+
+#### 3.13.2 Privacy Budget Monitoring
+```python
+class PrivacyMonitor:
+    def __init__(self, budget_tracker):
+        self.budget_tracker = budget_tracker
+        self.alerts = []
+        
+    def monitor_step(self, step_metrics):
+        """Monitor privacy budget usage during training."""
+        budget_status = self.budget_tracker.update_budget(
+            step_metrics['noise_multiplier'],
+            step_metrics['batch_size'],
+            step_metrics['dataset_size']
+        )
+        
+        if budget_status['budget_exhausted']:
+            self.alerts.append({
+                'type': 'budget_exhaustion',
+                'step': step_metrics['step'],
+                'details': budget_status
+            })
+            
+        return budget_status
+```
+
+### 3.14 Provenance Tracking Implementation
+
+#### 3.14.1 Core Provenance Tracking
+```python
+class ProvenanceTracker:
+    def __init__(self, config):
+        self.config = config
+        self.merkle_tree = MLProvenanceMerkleTree()
+        self.provenance_data = {
+            'data': {},
+            'model': {},
+            'training': {},
+            'privacy': {}
+        }
+        
+    def track_data_provenance(self, data_info):
+        """Track data provenance information."""
+        data_hash = self._generate_hash(data_info)
+        self.provenance_data['data'] = {
+            'hash': data_hash,
+            'timestamp': datetime.now().isoformat(),
+            'info': data_info
+        }
+        self.merkle_tree.add_node(data_hash)
+        return data_hash
+        
+    def track_model_provenance(self, model_info):
+        """Track model architecture and weights."""
+        model_hash = self._generate_hash(model_info)
+        self.provenance_data['model'] = {
+            'hash': model_hash,
+            'timestamp': datetime.now().isoformat(),
+            'info': model_info
+        }
+        self.merkle_tree.add_node(model_hash)
+        return model_hash
+        
+    def track_training_provenance(self, training_info):
+        """Track training process and metrics."""
+        training_hash = self._generate_hash(training_info)
+        self.provenance_data['training'] = {
+            'hash': training_hash,
+            'timestamp': datetime.now().isoformat(),
+            'info': training_info
+        }
+        self.merkle_tree.add_node(training_hash)
+        return training_hash
+```
+
+#### 3.14.2 Provenance Proof Generation
+```python
+class ProvenanceProofGenerator:
+    def __init__(self, merkle_tree):
+        self.merkle_tree = merkle_tree
+        
+    def generate_proof(self, component_hash):
+        """Generate Merkle proof for a component."""
+        proof = self.merkle_tree.generate_proof(component_hash)
+        return {
+            'component_hash': component_hash,
+            'proof': proof,
+            'root_hash': self.merkle_tree.get_root_hash(),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    def verify_proof(self, proof):
+        """Verify a Merkle proof."""
+        return self.merkle_tree.verify_proof(
+            proof['component_hash'],
+            proof['proof'],
+            proof['root_hash']
+        )
+```
+
+### 3.15 Merkle Tree Implementation
+
+#### 3.15.1 Merkle Tree Structure
+```python
+class MLProvenanceMerkleTree:
+    def __init__(self, depth=32):
+        self.depth = depth
+        self.nodes = {}
+        self.root_hash = None
+        
+    def add_node(self, hash_value):
+        """Add a new node to the Merkle tree."""
+        # Generate leaf node
+        leaf_node = {
+            'hash': hash_value,
+            'level': 0,
+            'index': len(self.nodes)
+        }
+        self.nodes[leaf_node['index']] = leaf_node
+        
+        # Update tree
+        self._update_tree()
+        
+    def _update_tree(self):
+        """Update the Merkle tree after adding a node."""
+        current_level = 0
+        while current_level < self.depth:
+            # Get nodes at current level
+            level_nodes = [
+                node for node in self.nodes.values()
+                if node['level'] == current_level
+            ]
+            
+            # Create parent nodes
+            for i in range(0, len(level_nodes), 2):
+                if i + 1 < len(level_nodes):
+                    parent_hash = self._hash_pair(
+                        level_nodes[i]['hash'],
+                        level_nodes[i + 1]['hash']
+                    )
+                else:
+                    parent_hash = level_nodes[i]['hash']
+                    
+                parent_node = {
+                    'hash': parent_hash,
+                    'level': current_level + 1,
+                    'index': len(self.nodes)
+                }
+                self.nodes[parent_node['index']] = parent_node
+                
+            current_level += 1
+            
+        # Update root hash
+        root_nodes = [
+            node for node in self.nodes.values()
+            if node['level'] == self.depth - 1
+        ]
+        if root_nodes:
+            self.root_hash = root_nodes[0]['hash']
+```
+
+#### 3.15.2 Proof Generation and Verification
+```python
+class MerkleProof:
+    def __init__(self, merkle_tree):
+        self.merkle_tree = merkle_tree
+        
+    def generate_proof(self, leaf_hash):
+        """Generate a Merkle proof for a leaf node."""
+        # Find leaf node
+        leaf_node = next(
+            (node for node in self.merkle_tree.nodes.values()
+             if node['hash'] == leaf_hash and node['level'] == 0),
+            None
+        )
+        
+        if not leaf_node:
+            raise ValueError("Leaf hash not found in tree")
+            
+        proof = []
+        current_node = leaf_node
+        
+        # Build proof path
+        while current_node['level'] < self.merkle_tree.depth - 1:
+            # Find sibling
+            sibling = self._find_sibling(current_node)
+            if sibling:
+                proof.append({
+                    'hash': sibling['hash'],
+                    'position': 'left' if sibling['index'] > current_node['index'] else 'right'
+                })
+                
+            # Move to parent
+            current_node = self._find_parent(current_node)
+            
+        return proof
+        
+    def verify_proof(self, leaf_hash, proof, root_hash):
+        """Verify a Merkle proof."""
+        current_hash = leaf_hash
+        
+        for step in proof:
+            if step['position'] == 'left':
+                current_hash = self._hash_pair(step['hash'], current_hash)
+            else:
+                current_hash = self._hash_pair(current_hash, step['hash'])
+                
+        return current_hash == root_hash
+```
+
+### 3.16 Privacy and Provenance Integration
+
+```mermaid
+sequenceDiagram
+    participant Training
+    participant PrivacyTracker
+    participant ProvenanceTracker
+    participant MerkleTree
+    
+    Training->>PrivacyTracker: Update Privacy Budget
+    PrivacyTracker->>ProvenanceTracker: Track Privacy Metrics
+    ProvenanceTracker->>MerkleTree: Add Privacy Hash
+    
+    Training->>ProvenanceTracker: Track Training Step
+    ProvenanceTracker->>MerkleTree: Add Training Hash
+    
+    Training->>ProvenanceTracker: Track Model State
+    ProvenanceTracker->>MerkleTree: Add Model Hash
+    
+    MerkleTree->>ProvenanceTracker: Generate Proof
+    ProvenanceTracker->>Training: Return Provenance Proof
+```
+
+#### 3.16.1 Integration Implementation
+```python
+class PrivacyProvenanceManager:
+    def __init__(self):
+        self.privacy_tracker = PrivacyBudgetTracker(
+            target_epsilon=8.0,
+            target_delta=1e-5
+        )
+        self.provenance_tracker = ProvenanceTracker(config={
+            'hash_algorithm': 'sha256',
+            'merkle_tree_depth': 32
+        })
+        self.proof_generator = ProvenanceProofGenerator(
+            self.provenance_tracker.merkle_tree
+        )
+        
+    def track_training_step(self, step_info):
+        """Track both privacy and provenance for a training step."""
+        # Track privacy budget
+        privacy_status = self.privacy_tracker.update_budget(
+            step_info['noise_multiplier'],
+            step_info['batch_size'],
+            step_info['dataset_size']
+        )
+        
+        # Track provenance
+        provenance_info = {
+            'step': step_info['step'],
+            'privacy': privacy_status,
+            'metrics': step_info['metrics'],
+            'model_state': step_info['model_state']
+        }
+        
+        # Generate proof
+        proof = self.proof_generator.generate_proof(
+            self.provenance_tracker.track_training_provenance(provenance_info)
+        )
+        
+        return {
+            'privacy_status': privacy_status,
+            'provenance_proof': proof
+        }
+```
+
 ## 4. Security and Privacy
 
 ### 4.1 Differential Privacy
