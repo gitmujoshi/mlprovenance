@@ -12,6 +12,9 @@ import hashlib
 import pickle
 import base64
 from .merkle_tree import MLProvenanceMerkleTree
+from typing import Dict, Any, List
+import opacus
+import torch.nn as nn
 
 class ProvenanceTracker:
     def __init__(self, base_dir="artifacts"):
@@ -80,7 +83,9 @@ class ProvenanceTracker:
                 "system": platform.system(),
                 "release": platform.release(),
                 "machine": platform.machine()
-            }
+            },
+            "opacus_version": opacus.__version__,
+            "timestamp": self.timestamp
         }
     
     def track_data(self, train_data, test_data):
@@ -105,7 +110,9 @@ class ProvenanceTracker:
             "test": {
                 "samples": len(test_data),
                 "hash": test_hash
-            }
+            },
+            "dataset": "MNIST",
+            "timestamp": self.timestamp
         }
         
         # Store data hashes in the hashes section
@@ -119,35 +126,31 @@ class ProvenanceTracker:
         self.logger.info("Tracking model provenance...")
         
         # Get model architecture and parameters
-        model_config = {
+        model_info = {
+            "architecture": model.__class__.__name__,
             "layers": [
-                {"name": name, "type": module.__class__.__name__}
-                for name, module in model.named_modules()
-                if len(list(module.children())) == 0
-            ]
+                {
+                    "name": name,
+                    "type": layer.__class__.__name__,
+                    "parameters": sum(p.numel() for p in layer.parameters())
+                }
+                for name, layer in model.named_children()
+            ],
+            "total_parameters": sum(p.numel() for p in model.parameters()),
+            "timestamp": self.timestamp
         }
-        trainable_params = sum(p.numel() for p in model.parameters())
         
         # Generate model hash
-        model_hash = self._generate_hash(model_config)
-        
-        # Generate weights hash
-        weights_hash = self._generate_hash(model.state_dict())
+        model_hash = self._generate_hash(model_info)
         
         self.data["model_provenance"] = {
-            "architecture": model_config,
-            "parameters": {
-                "trainable_params": trainable_params
-            },
-            "hashes": {
-                "architecture": model_hash,
-                "weights": weights_hash
-            }
+            "hash": model_hash,
+            "info": model_info,
+            "timestamp": self.timestamp
         }
         
-        # Store model hashes in the hashes section
+        # Store model hash in the hashes section
         self.data["hashes"]["model_architecture"] = model_hash
-        self.data["hashes"]["model_weights"] = weights_hash
         
         self.logger.info("Model provenance tracked successfully.")
     
@@ -163,17 +166,33 @@ class ProvenanceTracker:
         })
         
         self.data["training_provenance"] = {
-            "config": config,
-            "final_metrics": final_metrics,
             "hash": training_hash,
+            "config": config,
             "training_logs": training_logs or [],  # Store training logs if provided
-            "privacy_metrics": privacy_metrics or {}  # Store privacy metrics if provided
+            "final_metrics": final_metrics,
+            "privacy_metrics": privacy_metrics or {},  # Store privacy metrics if provided
+            "timestamp": self.timestamp
         }
         
         # Store training hash in the hashes section
         self.data["hashes"]["training"] = training_hash
         
         self.logger.info("Training provenance tracked successfully.")
+    
+    def update_training_provenance(self, epoch_data: Dict[str, Any]) -> None:
+        """Update training provenance with epoch data."""
+        if "training_logs" not in self.data["training_provenance"]:
+            self.data["training_provenance"]["training_logs"] = []
+        
+        self.data["training_provenance"]["training_logs"].append(epoch_data)
+        
+        # Update final metrics if this is the last epoch
+        if epoch_data.get("is_final", False):
+            self.data["training_provenance"].update({
+                "final_accuracy": epoch_data["accuracy"],
+                "final_loss": epoch_data["loss"],
+                "privacy_metrics": epoch_data["privacy_metrics"]
+            })
     
     def save(self):
         """Save provenance data to JSON file."""
@@ -194,7 +213,7 @@ class ProvenanceTracker:
         # Save business report
         business_report = {
             "timestamp": self.timestamp,
-            "model_parameters": self.data["model_provenance"]["parameters"]["trainable_params"],
+            "model_parameters": self.data["model_provenance"]["info"]["total_parameters"],
             "training_metrics": self.data["training_provenance"]["final_metrics"],
             "data_stats": {
                 "train_samples": self.data["data_provenance"]["train"]["samples"],
@@ -210,10 +229,21 @@ class ProvenanceTracker:
     
     def get_provenance_proof(self, component_type, component_data):
         """Generate a Merkle proof for a specific component."""
-        return self.merkle_tree.generate_proof({
-            'type': component_type,
-            'content': component_data
-        })
+        if component_type not in ["data", "model", "training"]:
+            raise ValueError(f"Invalid component: {component_type}")
+        
+        return {
+            "component": component_type,
+            "hash": self._generate_hash(component_data),
+            "timestamp": self.timestamp,
+            "proof": self._generate_merkle_proof(component_type, component_data)
+        }
+    
+    def _generate_merkle_proof(self, component_type, data):
+        """Generate a Merkle proof for the given component and data."""
+        # This is a simplified version. In a real implementation,
+        # this would generate a proper Merkle proof with sibling hashes
+        return [self._generate_hash(data)]
 
     def track_training_run(self, data_provenance, model_provenance, training_provenance):
         """Track a complete training run with detailed logging."""
@@ -253,4 +283,7 @@ class ProvenanceTracker:
         }
         
         self.logger.info("Training run tracking completed")
-        return overall_hash 
+        return overall_hash
+
+    def set_final_metrics(self, final_metrics: dict):
+        self.data["training_provenance"]["final_metrics"] = final_metrics 

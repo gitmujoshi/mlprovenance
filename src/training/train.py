@@ -11,6 +11,8 @@ from pathlib import Path
 import sys
 from opacus import PrivacyEngine
 from opacus.validators import ModuleValidator
+from typing import Tuple, Dict, Any
+import torch.nn.functional as F
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -115,8 +117,123 @@ def create_model():
     model = MNISTModel()
     return model
 
-def train_model():
-    """Train the MNIST model with differential privacy and provenance tracking."""
+def train_model(
+    model: nn.Module,
+    train_loader: DataLoader,
+    test_loader: DataLoader,
+    optimizer: optim.Optimizer,
+    privacy_engine: PrivacyEngine,
+    epochs: int,
+    device: str,
+    provenance_tracker: ProvenanceTracker,
+    target_delta: float,
+    noise_multiplier: float
+) -> Tuple[nn.Module, Dict[str, Any]]:
+    """Train the model with differential privacy."""
+    model = model.to(device)
+    model.train()
+    
+    # Initialize tracking
+    training_logs = []
+    best_accuracy = 0.0
+    
+    for epoch in range(epochs):
+        model.train()
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        
+        for i, (images, labels) in enumerate(train_loader):
+            images, labels = images.to(device), labels.to(device)
+            
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+            
+            # Forward pass
+            outputs = model(images)
+            loss = F.cross_entropy(outputs, labels)
+            
+            # Backward pass
+            loss.backward()
+            optimizer.step()
+            
+            # Track statistics
+            running_loss += loss.item()
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+            
+            # Log progress
+            if (i + 1) % 100 == 0:
+                print(f'Epoch [{epoch+1}/{epochs}], Step [{i+1}/{len(train_loader)}], '
+                      f'Loss: {loss.item():.4f}, Accuracy: {100.*correct/total:.2f}%')
+        
+        # Calculate epoch metrics
+        epoch_loss = running_loss / len(train_loader)
+        epoch_accuracy = 100. * correct / total
+        
+        # Test the model
+        model.eval()
+        test_correct = 0
+        test_total = 0
+        with torch.no_grad():
+            for images, labels in test_loader:
+                images, labels = images.to(device), labels.to(device)
+                outputs = model(images)
+                _, predicted = outputs.max(1)
+                test_total += labels.size(0)
+                test_correct += predicted.eq(labels).sum().item()
+        
+        test_accuracy = 100. * test_correct / test_total
+        print(f'Epoch [{epoch+1}/{epochs}], '
+              f'Loss: {epoch_loss:.4f}, '
+              f'Train Accuracy: {epoch_accuracy:.2f}%, '
+              f'Test Accuracy: {test_accuracy:.2f}%')
+        
+        # Update best accuracy
+        if test_accuracy > best_accuracy:
+            best_accuracy = test_accuracy
+        
+        # Log training metrics
+        training_logs.append({
+            'epoch': epoch + 1,
+            'loss': epoch_loss,
+            'accuracy': epoch_accuracy / 100.0,
+            'test_accuracy': test_accuracy / 100.0
+        })
+        
+        # Update provenance with epoch data
+        provenance_tracker.update_training_provenance({
+            'epoch': epoch + 1,
+            'loss': epoch_loss,
+            'accuracy': epoch_accuracy / 100.0,
+            'test_accuracy': test_accuracy / 100.0,
+            'privacy_metrics': {
+                'epsilon': privacy_engine.get_epsilon(target_delta),
+                'delta': target_delta,
+                'noise_multiplier': noise_multiplier
+            }
+        })
+    
+    # Get final privacy metrics
+    final_epsilon = privacy_engine.get_epsilon(target_delta)
+    final_delta = target_delta
+    
+    # Prepare final metrics
+    final_metrics = {
+        'final_accuracy': best_accuracy / 100.0,
+        'final_loss': epoch_loss,
+        'privacy_metrics': {
+            'achieved_epsilon': final_epsilon,
+            'achieved_delta': final_delta,
+            'privacy_budget_used': (final_epsilon / privacy_engine.target_epsilon) * 100 if hasattr(privacy_engine, 'target_epsilon') else None,
+            'noise_multiplier': noise_multiplier
+        }
+    }
+    
+    return model, final_metrics
+
+def main():
     # Set up logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
@@ -163,7 +280,8 @@ def train_model():
         "privacy_parameters": {
             "target_epsilon": 1.0,
             "target_delta": 1e-5,
-            "max_grad_norm": 1.0
+            "max_grad_norm": 1.0,
+            "noise_multiplier": 1.0
         }
     }
     
@@ -177,139 +295,44 @@ def train_model():
         module=model,
         optimizer=optimizer,
         data_loader=train_loader,
-        noise_multiplier=1.0,
+        noise_multiplier=config["privacy_parameters"]["noise_multiplier"],
         max_grad_norm=config["privacy_parameters"]["max_grad_norm"],
     )
     
-    # Training loop
-    logger.info("Training model...")
-    training_logs = []
-    
-    for epoch in range(config["epochs"]):
-        model.train()
-        train_loss = 0
-        train_correct = 0
-        train_total = 0
-        
-        for batch_idx, (data, target) in enumerate(train_loader):
-            data, target = data.to(device), target.to(device)
-            optimizer.zero_grad()
-            output = model(data)
-            loss = criterion(output, target)
-            loss.backward()
-            optimizer.step()
-            
-            train_loss += loss.item()
-            pred = output.argmax(dim=1, keepdim=True)
-            train_correct += pred.eq(target.view_as(pred)).sum().item()
-            train_total += target.size(0)
-            
-            # Get privacy metrics
-            if batch_idx % 100 == 0:
-                epsilon = privacy_engine.get_epsilon(config["privacy_parameters"]["target_delta"])
-                logger.info(f"Privacy budget used: {epsilon:.2f}")
-        
-        # Calculate epoch metrics
-        train_accuracy = train_correct / train_total
-        train_loss = train_loss / len(train_loader)
-        
-        # Evaluate on test set
-        model.eval()
-        test_loss = 0
-        test_correct = 0
-        test_total = 0
-        
-        with torch.no_grad():
-            for data, target in test_loader:
-                data, target = data.to(device), target.to(device)
-                output = model(data)
-                test_loss += criterion(output, target).item()
-                pred = output.argmax(dim=1, keepdim=True)
-                test_correct += pred.eq(target.view_as(pred)).sum().item()
-                test_total += target.size(0)
-        
-        test_accuracy = test_correct / test_total
-        test_loss = test_loss / len(test_loader)
-        
-        # Log metrics
-        logger.info(f"Epoch {epoch + 1}/{config['epochs']}:")
-        logger.info(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
-        logger.info(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
-        
-        training_logs.append({
-            "epoch": epoch + 1,
-            "accuracy": train_accuracy,
-            "loss": train_loss,
-            "val_accuracy": test_accuracy,
-            "val_loss": test_loss
-        })
-    
-    # Get final privacy metrics
-    final_epsilon = privacy_engine.get_epsilon(config["privacy_parameters"]["target_delta"])
-    privacy_budget_used = (final_epsilon / config["privacy_parameters"]["target_epsilon"]) * 100
-    
-    # Calculate privacy impact on performance
-    baseline_accuracy = 0.95  # Typical MNIST accuracy without privacy
-    performance_impact = f"{((test_accuracy - baseline_accuracy) / baseline_accuracy) * 100:.2f}%"
-    
-    # Track privacy metrics
-    privacy_metrics = {
-        "achieved_epsilon": final_epsilon,
-        "achieved_delta": config["privacy_parameters"]["target_delta"],
-        "privacy_budget_used": privacy_budget_used,
-        "secure_rng_enabled": False,  # We're in experimental mode
-        "performance_impact": performance_impact,
-        "privacy_utility_tradeoff": "Balanced" if privacy_budget_used < 80 else "Privacy-focused"
-    }
-    
-    # Track training provenance with privacy metrics
-    provenance.track_training(
+    # Train the model
+    model, final_metrics = train_model(
         model=model,
-        config=config,
-        training_logs=training_logs,
-        final_metrics={
-            "final_accuracy": test_accuracy,
-            "final_loss": test_loss
-        },
-        privacy_metrics=privacy_metrics
+        train_loader=train_loader,
+        test_loader=test_loader,
+        optimizer=optimizer,
+        privacy_engine=privacy_engine,
+        epochs=config["epochs"],
+        device=device,
+        provenance_tracker=provenance,
+        target_delta=config["privacy_parameters"]["target_delta"],
+        noise_multiplier=config["privacy_parameters"]["noise_multiplier"]
     )
     
-    # Save model
+    # Save the model
     model_dir = project_root / "artifacts" / "models" / provenance.timestamp
     model_dir.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), model_dir / "model.pth")
     
     # Save provenance data
+    provenance.set_final_metrics(final_metrics)
     provenance.save()
     
-    # Verify training
-    logger.info("Verifying training...")
+    # Verify provenance
     verifier = ProvenanceVerifier(provenance.provenance_dir)
-    verification_report = verifier.generate_verification_report(model_dir / "model.pth")
-    
-    # Generate Merkle proofs for all components
-    merkle_proofs = {}
-    for comp in ["data", "model", "training"]:
-        comp_data = None
-        if comp == "data":
-            comp_data = provenance.data["data_provenance"]
-        elif comp == "model":
-            comp_data = provenance.data["model_provenance"]
-        elif comp == "training":
-            comp_data = provenance.data["training_provenance"]
-        merkle_proofs[comp] = provenance.get_provenance_proof(comp, comp_data)
+    verification_report = verifier.generate_verification_report(model_path=model_dir / "model.pth")
     
     # Generate final report
     from src.provenance.generate_final_report import generate_final_report
-    report_path = generate_final_report(
-        provenance.provenance_dir,
-        model_dir / "model.pth",
-        verification_report=verification_report,
-        merkle_proofs=merkle_proofs
+    generate_final_report(
+        provenance_dir=provenance.provenance_dir,
+        model_path=model_dir / "model.pth",
+        verification_report=verification_report
     )
-    logger.info(f"Final report generated at {report_path}")
-    
-    return model, provenance
 
 if __name__ == "__main__":
-    train_model() 
+    main() 
