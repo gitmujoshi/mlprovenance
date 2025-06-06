@@ -33,7 +33,33 @@ def generate_final_report(provenance_dir, model_path, verification_report=None, 
     for log in training_logs:
         training_section.append(f"| {log['epoch']} | {log['accuracy']} | {log['loss']} | {log['val_accuracy']} | {log['val_loss']} |")
 
-    # Section 2: Provenance Details
+    # Section 2: Privacy Metrics
+    privacy_config = training.get('config', {}).get('privacy_parameters', {})
+    privacy_metrics = training.get('privacy_metrics', {})
+    privacy_section = [
+        "# Privacy Metrics",
+        "",
+        "## Privacy Configuration",
+        f"- Target Epsilon (Privacy Budget): {privacy_config.get('target_epsilon', 'N/A')}",
+        f"- Target Delta (Failure Probability): {privacy_config.get('target_delta', 'N/A')}",
+        f"- Max Gradient Norm: {privacy_config.get('max_grad_norm', 'N/A')}",
+        "",
+        "## Privacy Guarantees",
+        f"- Achieved Epsilon: {privacy_metrics.get('achieved_epsilon', 'N/A')}",
+        f"- Achieved Delta: {privacy_metrics.get('achieved_delta', 'N/A')}",
+        f"- Privacy Budget Used: {privacy_metrics.get('privacy_budget_used', 'N/A')}%",
+        "",
+        "## Privacy Implementation Details",
+        "- Differential Privacy: Enabled via Opacus",
+        "- Noise Addition: Gaussian noise with clipping",
+        "- Secure RNG: " + ("Enabled" if privacy_metrics.get('secure_rng_enabled', False) else "Disabled (experimental mode)"),
+        "",
+        "## Privacy Impact",
+        "- Model Performance Impact: " + privacy_metrics.get('performance_impact', 'N/A'),
+        "- Privacy-Utility Trade-off: " + privacy_metrics.get('privacy_utility_tradeoff', 'N/A'),
+    ]
+
+    # Section 3: Provenance Details
     hashes = provenance_data.get("hashes", {})
     provenance_section = [
         "# Provenance Details",
@@ -54,7 +80,7 @@ def generate_final_report(provenance_dir, model_path, verification_report=None, 
     for k, v in hashes.items():
         provenance_section.append(f"- {k}: `{v}`")
 
-    # Section 3: Merkle Tree and Proofs
+    # Section 4: Merkle Tree and Proofs
     merkle_section = [
         "# Merkle Tree & Verification",
         "",
@@ -71,7 +97,7 @@ def generate_final_report(provenance_dir, model_path, verification_report=None, 
     else:
         merkle_section.append("(Proofs not generated in this run)")
 
-    # Section 4: Verification Results
+    # Section 5: Verification Results
     verification_section = [
         "# Verification Results",
         "",
@@ -88,7 +114,7 @@ def generate_final_report(provenance_dir, model_path, verification_report=None, 
         verification_section.append("(Verification not performed in this run)")
 
     # Combine all sections
-    report = "\n".join(training_section + [""] + provenance_section + [""] + merkle_section + [""] + verification_section)
+    report = "\n".join(training_section + [""] + privacy_section + [""] + provenance_section + [""] + merkle_section + [""] + verification_section)
     with open(report_path, "w") as f:
         f.write(report)
     print(f"INFO:src.provenance.generate_final_report:Markdown report generated at {report_path}")

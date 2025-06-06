@@ -6,7 +6,7 @@ import git
 from datetime import datetime
 from pathlib import Path
 import logging
-import tensorflow as tf
+import torch
 import numpy as np
 import hashlib
 import pickle
@@ -41,27 +41,41 @@ class ProvenanceTracker:
         # Initialize Merkle tree
         self.merkle_tree = MLProvenanceMerkleTree()
     
-    def _generate_hash(self, data):
-        """Generate SHA-256 hash of the given data."""
-        if isinstance(data, (dict, list)):
-            # Convert numpy arrays and bytes in lists to base64 strings before JSON serialization
-            if isinstance(data, list):
-                data = [base64.b64encode(x.tobytes()).decode('utf-8') if isinstance(x, np.ndarray) else x for x in data]
-            data = json.dumps(data, sort_keys=True).encode('utf-8')
-        elif isinstance(data, (np.ndarray, tf.Tensor)):
-            if isinstance(data, tf.Tensor):
-                data = data.numpy().tobytes()
-            else:
-                data = data.tobytes()
-        elif not isinstance(data, bytes):
-            data = str(data).encode('utf-8')
-        return hashlib.sha256(data).hexdigest()
+    def _generate_hash(self, data, component_name=None):
+        """Generate SHA-256 hash of the given data with detailed logging."""
+        self.logger.info(f"Generating hash for {component_name or 'data'}")
+        
+        if isinstance(data, dict):
+            # Convert tensors and ndarrays to lists in dictionaries
+            serializable_data = {}
+            for key, value in data.items():
+                if isinstance(value, torch.Tensor):
+                    serializable_data[key] = value.cpu().numpy().tolist()
+                elif isinstance(value, np.ndarray):
+                    serializable_data[key] = value.tolist()
+                else:
+                    serializable_data[key] = value
+            data = serializable_data
+        elif isinstance(data, torch.Tensor):
+            data = data.cpu().numpy().tolist()
+        elif isinstance(data, np.ndarray):
+            data = data.tolist()
+        
+        # Log the data structure being hashed
+        self.logger.debug(f"Data structure for {component_name}: {json.dumps(data, indent=2)}")
+        
+        # Serialize to JSON with consistent formatting
+        data = json.dumps(data, sort_keys=True, indent=2).encode('utf-8')
+        hash_value = hashlib.sha256(data).hexdigest()
+        
+        self.logger.info(f"Generated hash for {component_name}: {hash_value}")
+        return hash_value
     
     def _get_system_info(self):
         """Get system information."""
         return {
             "python_version": sys.version,
-            "tensorflow_version": tf.__version__,
+            "torch_version": torch.__version__,
             "platform": {
                 "system": platform.system(),
                 "release": platform.release(),
@@ -105,36 +119,25 @@ class ProvenanceTracker:
         self.logger.info("Tracking model provenance...")
         
         # Get model architecture and parameters
-        model_config = model.get_config()
-        trainable_params = model.count_params()
+        model_config = {
+            "layers": [
+                {"name": name, "type": module.__class__.__name__}
+                for name, module in model.named_modules()
+                if len(list(module.children())) == 0
+            ]
+        }
+        trainable_params = sum(p.numel() for p in model.parameters())
         
         # Generate model hash
         model_hash = self._generate_hash(model_config)
         
-        # Sort weights by layer name and weight type to ensure consistent ordering
-        weights = []
-        for layer in model.layers:
-            for i, w in enumerate(layer.weights):
-                # Convert to float32 to ensure consistent precision
-                w_numpy = w.numpy().astype(np.float32)
-                # Create a tuple of (layer_name, weight_type, weight_array)
-                weight_type = 'kernel' if i == 0 else 'bias'
-                weights.append((layer.name, weight_type, w_numpy))
-        
-        # Sort by layer name and weight type
-        weights.sort(key=lambda x: (x[0], x[1]))
-        
-        # Generate hash using only the numpy arrays
-        weights_hash = self._generate_hash([w[2] for w in weights])
+        # Generate weights hash
+        weights_hash = self._generate_hash(model.state_dict())
         
         self.data["model_provenance"] = {
             "architecture": model_config,
             "parameters": {
-                "trainable_params": trainable_params,
-                "optimizer": {
-                    "name": model.optimizer.__class__.__name__,
-                    "config": model.optimizer.get_config()
-                }
+                "trainable_params": trainable_params
             },
             "hashes": {
                 "architecture": model_hash,
@@ -148,21 +151,23 @@ class ProvenanceTracker:
         
         self.logger.info("Model provenance tracked successfully.")
     
-    def track_training(self, config, final_metrics, training_logs=None):
+    def track_training(self, model, config, final_metrics, training_logs=None, privacy_metrics=None):
         """Track training provenance."""
-        self.logger.info("Tracking training provenance...")
+        self.logger.info("Tracking training process...")
         
         # Generate training hash
         training_hash = self._generate_hash({
             "config": config,
-            "metrics": final_metrics
+            "metrics": final_metrics,
+            "privacy_metrics": privacy_metrics
         })
         
         self.data["training_provenance"] = {
             "config": config,
             "final_metrics": final_metrics,
             "hash": training_hash,
-            "training_logs": training_logs or []  # Store training logs if provided
+            "training_logs": training_logs or [],  # Store training logs if provided
+            "privacy_metrics": privacy_metrics or {}  # Store privacy metrics if provided
         }
         
         # Store training hash in the hashes section
@@ -197,15 +202,55 @@ class ProvenanceTracker:
             },
             "provenance_hash": root_hash
         }
+        
         with open(self.provenance_dir / "business_report.json", "w") as f:
             json.dump(business_report, f, indent=2)
         
         self.logger.info("Provenance data saved successfully.")
     
-    def verify_component(self, component_type, component_data):
-        """Verify a specific component using Merkle tree."""
-        return self.merkle_tree.verify_component(component_type, component_data)
-    
     def get_provenance_proof(self, component_type, component_data):
-        """Get a Merkle proof for a specific component."""
-        return self.merkle_tree.get_provenance_proof(component_type, component_data) 
+        """Generate a Merkle proof for a specific component."""
+        return self.merkle_tree.generate_proof({
+            'type': component_type,
+            'content': component_data
+        })
+
+    def track_training_run(self, data_provenance, model_provenance, training_provenance):
+        """Track a complete training run with detailed logging."""
+        self.logger.info("Starting training run tracking...")
+        
+        # Generate hashes for each component
+        data_hash = self._generate_hash(data_provenance, "data")
+        model_hash = self._generate_hash(model_provenance, "model")
+        training_hash = self._generate_hash(training_provenance, "training")
+        
+        # Log hash generation
+        self.logger.info("\nGenerated hashes:")
+        self.logger.info(f"Data:     {data_hash}")
+        self.logger.info(f"Model:    {model_hash}")
+        self.logger.info(f"Training: {training_hash}")
+        
+        # Add to Merkle tree
+        self.merkle_tree.add_node(data_hash)
+        self.merkle_tree.add_node(model_hash)
+        self.merkle_tree.add_node(training_hash)
+        
+        # Generate overall hash
+        overall_hash = self._generate_hash({
+            "data": data_hash,
+            "model": model_hash,
+            "training": training_hash
+        }, "overall")
+        
+        self.logger.info(f"Overall hash: {overall_hash}")
+        
+        # Store hashes in provenance data
+        self.data["hashes"] = {
+            "data": data_hash,
+            "model": model_hash,
+            "training": training_hash,
+            "overall": overall_hash
+        }
+        
+        self.logger.info("Training run tracking completed")
+        return overall_hash 

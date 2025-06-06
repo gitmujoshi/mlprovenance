@@ -1,7 +1,7 @@
 import hashlib
 import json
 import numpy as np
-import tensorflow as tf
+import torch
 from typing import List, Dict, Any, Optional, Union
 import logging
 
@@ -18,27 +18,26 @@ class MerkleNode:
         if self.data is None:
             return None
         
-        if isinstance(self.data, (dict, list)):
-            # Convert numpy arrays and bytes in lists to base64 strings
-            if isinstance(self.data, list):
-                data = [self._encode_data(x) for x in self.data]
+        def _serialize_data(data):
+            if isinstance(data, (np.ndarray, torch.Tensor)):
+                if isinstance(data, torch.Tensor):
+                    data = data.detach().cpu().numpy()
+                return data.tobytes().hex()
+            elif isinstance(data, dict):
+                return {k: _serialize_data(v) for k, v in sorted(data.items())}
+            elif isinstance(data, list):
+                return [_serialize_data(x) for x in data]
             else:
-                data = {k: self._encode_data(v) for k, v in self.data.items()}
-            return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
-        elif isinstance(self.data, (np.ndarray, tf.Tensor)):
-            if isinstance(self.data, tf.Tensor):
-                data = self.data.numpy().tobytes()
-            else:
-                data = self.data.tobytes()
-            return hashlib.sha256(data).hexdigest()
-        else:
-            return hashlib.sha256(str(self.data).encode()).hexdigest()
+                return str(data)
+        
+        serialized_data = _serialize_data(self.data)
+        return hashlib.sha256(json.dumps(serialized_data, sort_keys=True).encode()).hexdigest()
     
     def _encode_data(self, data: Any) -> Any:
         """Encode data for hashing."""
-        if isinstance(data, (np.ndarray, tf.Tensor)):
-            if isinstance(data, tf.Tensor):
-                data = data.numpy()
+        if isinstance(data, (np.ndarray, torch.Tensor)):
+            if isinstance(data, torch.Tensor):
+                data = data.detach().cpu().numpy()
             return data.tobytes().hex()
         return data
 
@@ -143,11 +142,48 @@ class MerkleTree:
             return proof
         return None
 
-class MLProvenanceMerkleTree:
+class MLProvenanceMerkleTree(MerkleTree):
     """A specialized Merkle tree for ML provenance tracking."""
     def __init__(self):
-        self.tree = MerkleTree()
+        super().__init__()
+        self.nodes = {}
         self.logger = logging.getLogger(__name__)
+    
+    def _hash_data(self, data):
+        if isinstance(data, (np.ndarray, torch.Tensor)):
+            # Convert to bytes for hashing
+            if isinstance(data, torch.Tensor):
+                data = data.detach().cpu().numpy()
+            data_bytes = data.tobytes()
+        elif isinstance(data, (dict, list)):
+            data_bytes = json.dumps(data, sort_keys=True).encode()
+        else:
+            data_bytes = str(data).encode()
+        return hashlib.sha256(data_bytes).hexdigest()
+
+    def add_node(self, node_id, data):
+        hash_value = self._hash_data(data)
+        self.nodes[node_id] = {
+            'hash': hash_value,
+            'data': data
+        }
+        return hash_value
+
+    def get_proof(self, node_id):
+        if node_id not in self.nodes:
+            return None
+        return {
+            'node_id': node_id,
+            'hash': self.nodes[node_id]['hash']
+        }
+
+    def verify_proof(self, proof):
+        if not proof or 'node_id' not in proof or 'hash' not in proof:
+            return False
+        node_id = proof['node_id']
+        if node_id not in self.nodes:
+            return False
+        return self.nodes[node_id]['hash'] == proof['hash']
     
     def track_training_run(self, 
                           data_provenance: Dict[str, Any],
@@ -170,9 +206,35 @@ class MLProvenanceMerkleTree:
             }
         ]
         
+        # Create leaf nodes with proper hashing
+        leaf_nodes = []
+        for leaf in leaves:
+            node = MerkleNode(leaf)
+            leaf_nodes.append(node)
+        
         # Build the tree
-        self.tree.build_tree(leaves)
-        root_hash = self.tree.get_root_hash()
+        while len(leaf_nodes) > 1:
+            new_level = []
+            for i in range(0, len(leaf_nodes), 2):
+                left = leaf_nodes[i]
+                right = leaf_nodes[i + 1] if i + 1 < len(leaf_nodes) else None
+                
+                # Create parent node
+                parent = MerkleNode()
+                parent.left = left
+                parent.right = right
+                
+                # Calculate parent hash
+                if right:
+                    parent.hash = self._combine_hashes(left.hash, right.hash)
+                else:
+                    parent.hash = left.hash
+                
+                new_level.append(parent)
+            leaf_nodes = new_level
+        
+        self.root = leaf_nodes[0]
+        root_hash = self.root.hash
         
         self.logger.info(f"Tracked training run with root hash: {root_hash}")
         return root_hash
@@ -186,12 +248,12 @@ class MLProvenanceMerkleTree:
             'content': component_data
         }
         
-        proof = self.tree.generate_proof(component)
+        proof = self.generate_proof(component)
         if not proof:
             self.logger.warning(f"No proof found for component: {component_type}")
             return False
         
-        is_valid = self.tree.verify_data(component, proof)
+        is_valid = self.verify_data(component, proof)
         self.logger.info(f"Component {component_type} verification: {'success' if is_valid else 'failed'}")
         return is_valid
     
@@ -204,7 +266,7 @@ class MLProvenanceMerkleTree:
             'content': component_data
         }
         
-        proof = self.tree.generate_proof(component)
+        proof = self.generate_proof(component)
         if proof:
             self.logger.info(f"Generated proof for component: {component_type}")
         else:
