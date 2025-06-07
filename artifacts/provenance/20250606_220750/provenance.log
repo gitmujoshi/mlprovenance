@@ -1,0 +1,102 @@
+2025-06-06 22:08:52,272 - INFO - Starting verification report generation...
+2025-06-06 22:08:52,440 - INFO - Loaded provenance data version: 20250606_220750
+2025-06-06 22:08:52,942 - WARNING - Missing statistics in data provenance
+2025-06-06 22:08:52,942 - INFO - Generating hash for data
+2025-06-06 22:08:52,943 - INFO - Generated hash for None: 9e7a51a337688d67331a5464849006515dfd3e5e5a61e38be06eeac0885afd42
+2025-06-06 22:08:52,943 - INFO - Verifying component hashes...
+2025-06-06 22:08:52,943 - INFO - [VERIFIER] data_info to be hashed: {'dataset': 'MNIST', 'timestamp': '20250606_220750', 'train': {'samples': 60000, 'mean': 0.13066062331199646, 'std': 0.30810776352882385, 'hash': '88105458fbeac8a2687f76019d456c284531fcc83fe674f855b44298c2720b08', 'metadata': {'statistics': {'mean': 0.13066062331199646, 'std': 0.30810776352882385, 'min': 0.0, 'max': 1.0, 'shape': [60000, 28, 28], 'dtype': 'float32'}}}, 'test': {'samples': 10000, 'hash': 'e09cf9414aeaa6cfd4aa68fb9f2be67ed11b32f490bcbc684024609313f3cdf4', 'metadata': {'statistics': {'mean': 0.13251467049121857, 'std': 0.3104802668094635, 'min': 0.0, 'max': 1.0, 'shape': [10000, 28, 28], 'dtype': 'float32'}}}}
+2025-06-06 22:08:52,943 - INFO - Generating hash for data
+2025-06-06 22:08:52,943 - INFO - Generated hash for data: 58565a0b9a13f2ad0a3cf74eaccbad9176e6c7351701fb9636226c39f43d8da0
+2025-06-06 22:08:52,943 - INFO - [VERIFIER] data hash: 58565a0b9a13f2ad0a3cf74eaccbad9176e6c7351701fb9636226c39f43d8da0
+2025-06-06 22:08:52,946 - INFO - Generating hash for model
+2025-06-06 22:08:53,046 - INFO - Generated hash for model: 0f8f1bdf894e7c1861c3e59b5f388072075fdb515ca77d7a2330e91046343d2d
+2025-06-06 22:08:53,047 - INFO - Generating hash for training
+2025-06-06 22:08:54,311 - INFO - Generated hash for training: ff4eaa97388c0f790e151e4de794d270450148953054b7a65fbe037310c7f83b
+2025-06-06 22:08:54,311 - INFO - Generating hash for privacy
+2025-06-06 22:08:54,312 - INFO - Generated hash for privacy: abe08b09bd80db39504e56b35162938f6650b0075158fa013079792a36bf643b
+2025-06-06 22:08:54,312 - INFO - 
+Determining overall verification status...
+2025-06-06 22:08:54,312 - INFO - 
+data_verification:
+2025-06-06 22:08:54,312 - INFO -   has_train_data: True
+2025-06-06 22:08:54,312 - INFO -   has_test_data: True
+2025-06-06 22:08:54,312 - INFO -   has_timestamp: True
+2025-06-06 22:08:54,312 - INFO -   hash_match: False
+2025-06-06 22:08:54,312 - INFO -   statistics_verified: False
+2025-06-06 22:08:54,312 - INFO -   merkle_verified: False
+2025-06-06 22:08:54,312 - INFO -   metadata_verified: False
+2025-06-06 22:08:54,312 - INFO -   merkle_tree: None
+2025-06-06 22:08:54,312 - INFO - 
+model_verification:
+2025-06-06 22:08:54,312 - INFO -   model_exists: True
+2025-06-06 22:08:54,312 - INFO -   model_hash_match: False
+2025-06-06 22:08:54,312 - INFO -   model_merkle_verified: False
+2025-06-06 22:08:54,312 - INFO - 
+training_verification:
+2025-06-06 22:08:54,312 - INFO -   final_metrics_present: True
+2025-06-06 22:08:54,312 - INFO -   training_logs_present: True
+2025-06-06 22:08:54,312 - INFO -   privacy_metrics_present: True
+2025-06-06 22:08:54,312 - INFO -   hash_present: False
+2025-06-06 22:08:54,312 - INFO -   timestamp_present: True
+2025-06-06 22:08:54,312 - INFO -   accuracy_present: True
+2025-06-06 22:08:54,312 - INFO -   loss_present: True
+2025-06-06 22:08:54,312 - INFO - 
+hash_verification:
+2025-06-06 22:08:54,312 - INFO -   data_hash_match: True
+2025-06-06 22:08:54,312 - INFO -   model_hash_match: False
+2025-06-06 22:08:54,312 - INFO -   training_hash_match: True
+2025-06-06 22:08:54,312 - INFO -   privacy_hash_match: True
+2025-06-06 22:08:54,312 - INFO - 
+Overall verification status: FAILURE
+2025-06-06 22:08:54,312 - INFO - Verification report saved to: artifacts/provenance/20250606_220750/verification.json
+2025-06-06 22:08:54,313 - INFO - Starting verification report generation...
+2025-06-06 22:08:54,484 - INFO - Loaded provenance data version: 20250606_220750
+2025-06-06 22:08:54,996 - WARNING - Missing statistics in data provenance
+2025-06-06 22:08:54,996 - INFO - Generating hash for data
+2025-06-06 22:08:54,996 - INFO - Generated hash for None: 9e7a51a337688d67331a5464849006515dfd3e5e5a61e38be06eeac0885afd42
+2025-06-06 22:08:54,996 - INFO - Verifying component hashes...
+2025-06-06 22:08:54,996 - INFO - [VERIFIER] data_info to be hashed: {'dataset': 'MNIST', 'timestamp': '20250606_220750', 'train': {'samples': 60000, 'mean': 0.13066062331199646, 'std': 0.30810776352882385, 'hash': '88105458fbeac8a2687f76019d456c284531fcc83fe674f855b44298c2720b08', 'metadata': {'statistics': {'mean': 0.13066062331199646, 'std': 0.30810776352882385, 'min': 0.0, 'max': 1.0, 'shape': [60000, 28, 28], 'dtype': 'float32'}}}, 'test': {'samples': 10000, 'hash': 'e09cf9414aeaa6cfd4aa68fb9f2be67ed11b32f490bcbc684024609313f3cdf4', 'metadata': {'statistics': {'mean': 0.13251467049121857, 'std': 0.3104802668094635, 'min': 0.0, 'max': 1.0, 'shape': [10000, 28, 28], 'dtype': 'float32'}}}}
+2025-06-06 22:08:54,996 - INFO - Generating hash for data
+2025-06-06 22:08:54,996 - INFO - Generated hash for data: 58565a0b9a13f2ad0a3cf74eaccbad9176e6c7351701fb9636226c39f43d8da0
+2025-06-06 22:08:54,996 - INFO - [VERIFIER] data hash: 58565a0b9a13f2ad0a3cf74eaccbad9176e6c7351701fb9636226c39f43d8da0
+2025-06-06 22:08:54,998 - INFO - Generating hash for model
+2025-06-06 22:08:55,099 - INFO - Generated hash for model: 0f8f1bdf894e7c1861c3e59b5f388072075fdb515ca77d7a2330e91046343d2d
+2025-06-06 22:08:55,101 - INFO - Generating hash for training
+2025-06-06 22:08:56,193 - INFO - Generated hash for training: ff4eaa97388c0f790e151e4de794d270450148953054b7a65fbe037310c7f83b
+2025-06-06 22:08:56,193 - INFO - Generating hash for privacy
+2025-06-06 22:08:56,193 - INFO - Generated hash for privacy: abe08b09bd80db39504e56b35162938f6650b0075158fa013079792a36bf643b
+2025-06-06 22:08:56,193 - INFO - 
+Determining overall verification status...
+2025-06-06 22:08:56,193 - INFO - 
+data_verification:
+2025-06-06 22:08:56,193 - INFO -   has_train_data: True
+2025-06-06 22:08:56,193 - INFO -   has_test_data: True
+2025-06-06 22:08:56,193 - INFO -   has_timestamp: True
+2025-06-06 22:08:56,193 - INFO -   hash_match: False
+2025-06-06 22:08:56,193 - INFO -   statistics_verified: False
+2025-06-06 22:08:56,193 - INFO -   merkle_verified: False
+2025-06-06 22:08:56,193 - INFO -   metadata_verified: False
+2025-06-06 22:08:56,193 - INFO -   merkle_tree: None
+2025-06-06 22:08:56,194 - INFO - 
+model_verification:
+2025-06-06 22:08:56,194 - INFO -   model_exists: True
+2025-06-06 22:08:56,194 - INFO -   model_hash_match: False
+2025-06-06 22:08:56,194 - INFO -   model_merkle_verified: False
+2025-06-06 22:08:56,194 - INFO - 
+training_verification:
+2025-06-06 22:08:56,194 - INFO -   final_metrics_present: True
+2025-06-06 22:08:56,194 - INFO -   training_logs_present: True
+2025-06-06 22:08:56,194 - INFO -   privacy_metrics_present: True
+2025-06-06 22:08:56,194 - INFO -   hash_present: False
+2025-06-06 22:08:56,194 - INFO -   timestamp_present: True
+2025-06-06 22:08:56,194 - INFO -   accuracy_present: True
+2025-06-06 22:08:56,194 - INFO -   loss_present: True
+2025-06-06 22:08:56,194 - INFO - 
+hash_verification:
+2025-06-06 22:08:56,194 - INFO -   data_hash_match: True
+2025-06-06 22:08:56,194 - INFO -   model_hash_match: False
+2025-06-06 22:08:56,194 - INFO -   training_hash_match: True
+2025-06-06 22:08:56,194 - INFO -   privacy_hash_match: True
+2025-06-06 22:08:56,194 - INFO - 
+Overall verification status: FAILURE
+2025-06-06 22:08:56,194 - INFO - Verification report saved to: artifacts/provenance/20250606_220750/verification.json
