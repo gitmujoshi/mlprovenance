@@ -376,3 +376,239 @@ This will print the Merkle proof and the verification result for the selected co
 ---
 
 For more details, see the implementation in `src/provenance/merkle_tree.py` and the usage in `src/provenance/tracker.py`. 
+
+# ML Provenance Tracking
+
+This document describes the techniques and best practices for tracking machine learning provenance in this project.
+
+## Overview
+
+The project implements a comprehensive provenance tracking system that records and verifies every aspect of the ML pipeline, from data to model training. The system uses cryptographic verification methods to ensure tamper-evidence and reproducibility.
+
+## Tracking Components
+
+### 1. Data Provenance
+
+#### Data Versioning
+- **Hash-based Tracking**
+  - SHA-256 hashes of training and test data
+  - Statistics tracking (mean, std, shape)
+  - Metadata preservation
+  - Data source verification
+
+#### Data Integrity
+- **Merkle Tree Integration**
+  - Data nodes in Merkle tree
+  - Proof generation for data verification
+  - Efficient verification of data integrity
+
+### 2. Model Provenance
+
+#### Architecture Tracking
+- **Model Structure**
+  - Layer configurations
+  - Parameter counts
+  - Architecture hash
+  - Version tracking
+
+#### Weights Tracking
+- **Weight Verification**
+  - Weight hashes
+  - State dict tracking
+  - Update verification
+  - Checkpoint management
+
+### 3. Training Provenance
+
+#### Per-Epoch Tracking
+- **Model State**
+  - Model state hash for each epoch
+  - Weight updates verification
+  - State dict preservation
+  - Checkpoint creation
+
+- **Training Metrics**
+  - Loss tracking
+  - Accuracy monitoring
+  - Validation metrics
+  - Performance statistics
+
+- **Privacy Metrics** (if applicable)
+  - Privacy budget consumption
+  - Noise addition tracking
+  - Gradient clipping verification
+  - Epsilon/delta monitoring
+
+- **Metadata**
+  - Timestamp recording
+  - Epoch number tracking
+  - Training duration
+  - Resource usage
+
+#### Epoch-wise Merkle Tree Updates
+```
+Epoch Node
+├── Model State
+│   ├── State Dict Hash
+│   └── Weight Updates Hash
+├── Metrics
+│   ├── Training Loss
+│   ├── Training Accuracy
+│   ├── Validation Loss
+│   └── Validation Accuracy
+├── Privacy Metrics
+│   ├── Budget Consumption
+│   ├── Noise Level
+│   └── Gradient Norm
+└── Metadata
+    ├── Timestamp
+    ├── Epoch Number
+    └── Duration
+```
+
+### 4. Verification System
+
+#### Merkle Tree Implementation
+- **Tree Structure**
+  - Root node with overall hash
+  - Component nodes (data, model, training)
+  - Epoch-wise nodes
+  - Proof generation
+
+#### Verification Process
+1. **Data Verification**
+   - Hash verification
+   - Statistics validation
+   - Metadata checking
+   - Proof verification
+
+2. **Model Verification**
+   - Architecture verification
+   - Weight verification
+   - State dict validation
+   - Update verification
+
+3. **Training Verification**
+   - Epoch-wise verification
+   - Metric validation
+   - Privacy verification
+   - Timeline verification
+
+## Implementation Details
+
+### 1. Tracker Class
+```python
+class Tracker:
+    def __init__(self):
+        self.merkle_tree = MerkleTree()
+        self.provenance = {}
+        self.timestamp = None
+
+    def track_epoch(self, epoch_data):
+        # Track model state
+        model_state = self._track_model_state(epoch_data)
+        
+        # Track metrics
+        metrics = self._track_metrics(epoch_data)
+        
+        # Track privacy metrics
+        privacy_metrics = self._track_privacy(epoch_data)
+        
+        # Create epoch node
+        epoch_node = {
+            'model_state': model_state,
+            'metrics': metrics,
+            'privacy_metrics': privacy_metrics,
+            'metadata': {
+                'timestamp': time.time(),
+                'epoch': epoch_data['epoch'],
+                'duration': epoch_data['duration']
+            }
+        }
+        
+        # Add to Merkle tree
+        self.merkle_tree.add_node(epoch_node, 'epoch')
+```
+
+### 2. Verifier Class
+```python
+class Verifier:
+    def verify_epoch(self, epoch_data, proof):
+        # Verify model state
+        self._verify_model_state(epoch_data['model_state'])
+        
+        # Verify metrics
+        self._verify_metrics(epoch_data['metrics'])
+        
+        # Verify privacy metrics
+        self._verify_privacy(epoch_data['privacy_metrics'])
+        
+        # Verify Merkle proof
+        self.merkle_tree.verify_proof(proof, epoch_data['node_id'])
+```
+
+## Best Practices
+
+### 1. Data Tracking
+- Track data versions
+- Preserve statistics
+- Maintain metadata
+- Verify integrity
+
+### 2. Model Tracking
+- Track architecture
+- Monitor weights
+- Verify updates
+- Manage checkpoints
+
+### 3. Training Tracking
+- Track per-epoch data
+- Monitor metrics
+- Verify privacy
+- Maintain timeline
+
+### 4. Verification
+- Regular verification
+- Proof management
+- Error handling
+- Performance optimization
+
+## Usage Example
+
+```python
+# Initialize tracker
+tracker = Tracker()
+
+# Track training
+for epoch in range(epochs):
+    # Train model
+    model.train()
+    
+    # Track epoch
+    epoch_data = {
+        'model_state': model.state_dict(),
+        'metrics': {
+            'loss': loss,
+            'accuracy': accuracy
+        },
+        'privacy_metrics': {
+            'budget': budget,
+            'noise': noise
+        },
+        'epoch': epoch,
+        'duration': duration
+    }
+    tracker.track_epoch(epoch_data)
+
+# Initialize verifier
+verifier = Verifier()
+
+# Verify training
+for epoch_data in tracker.provenance['epochs']:
+    proof = tracker.merkle_tree.get_proof(epoch_data['node_id'])
+    verifier.verify_epoch(epoch_data, proof)
+```
+
+## Conclusion
+
+The provenance tracking system provides a comprehensive solution for tracking and verifying ML pipelines. By using Merkle trees and cryptographic verification, it ensures tamper-evidence and reproducibility of the entire process. 

@@ -21,6 +21,11 @@ This project demonstrates provenance tracking for a machine learning model train
   - Privacy budget monitoring
   - Comprehensive logging of training parameters
   - Performance metrics tracking (accuracy, loss)
+  - Per-epoch Merkle tree updates with:
+    - Model state hash
+    - Training metrics (loss, accuracy)
+    - Privacy metrics (if applicable)
+    - Timestamp and epoch number
 
 - **Differential Privacy**
   - Privacy-preserving training using Opacus
@@ -29,16 +34,43 @@ This project demonstrates provenance tracking for a machine learning model train
   - Privacy budget tracking
 
 - **Verification System**
-  - Merkle tree-based verification
-  - Proof generation for data, model, and training
-  - Comprehensive verification reports
-  - Automated integrity checks
+  - Merkle tree-based verification with:
+    - Root hash verification
+    - Component-wise hash verification
+    - Proof generation for data, model, and training
+    - Automated integrity checks
+  - Comprehensive verification reports including:
+    - Data verification (hash match, statistics, metadata)
+    - Model verification (architecture, weights)
+    - Training verification (metrics, logs)
+    - Privacy verification (budget consumption)
+  - Merkle tree structure:
+    ```
+    Root Hash
+    ├── Data Node
+    │   ├── Training Data Hash
+    │   └── Test Data Hash
+    ├── Model Node
+    │   ├── Architecture Hash
+    │   └── Weights Hash
+    └── Training Node
+        ├── Epoch 1 Node
+        │   ├── Model State Hash
+        │   ├── Metrics Hash
+        │   └── Privacy Metrics Hash
+        ├── Epoch 2 Node
+        │   ├── Model State Hash
+        │   ├── Metrics Hash
+        │   └── Privacy Metrics Hash
+        └── ... (subsequent epochs)
+    ```
 
 - **Reporting**
   - Detailed markdown reports
   - Training statistics and metrics
   - Privacy budget consumption
   - Verification results
+  - Merkle tree visualization
 
 ## Project Structure
 

@@ -4,13 +4,13 @@
 echo "Activating virtual environment..."
 source venv/bin/activate
 
-# Add project root to PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+# Create necessary directories
+mkdir -p artifacts/provenance
+mkdir -p artifacts/models
 
-# Verify Python interpreter
-echo "Verifying Python interpreter..."
-which python
-
-# Start training
+# Run training
 echo "Starting training..."
-python src/training/train.py 
+python -m src.training.train
+
+# Print completion message
+echo "Training completed. Check artifacts/provenance for the latest run." 
