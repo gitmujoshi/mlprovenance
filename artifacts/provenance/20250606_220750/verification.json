@@ -1,0 +1,42 @@
+{
+  "provenance_version": "20250606_220750",
+  "overall_status": false,
+  "verification_results": {
+    "data_verification": {
+      "has_train_data": true,
+      "has_test_data": true,
+      "has_timestamp": true,
+      "hash_match": false,
+      "statistics_verified": false,
+      "merkle_verified": false,
+      "metadata_verified": false,
+      "merkle_tree": null
+    },
+    "model_verification": {
+      "model_exists": true,
+      "model_hash_match": false,
+      "model_merkle_verified": false
+    },
+    "training_verification": {
+      "final_metrics_present": true,
+      "training_logs_present": true,
+      "privacy_metrics_present": true,
+      "hash_present": false,
+      "timestamp_present": true,
+      "accuracy_present": true,
+      "loss_present": true
+    },
+    "hash_verification": {
+      "data_hash_match": true,
+      "model_hash_match": false,
+      "training_hash_match": true,
+      "privacy_hash_match": true
+    }
+  },
+  "overall_verification": {
+    "tree_structure_valid": true,
+    "hash_chain_valid": true,
+    "timestamp_chain_valid": true
+  },
+  "verification_timestamp": "2025-06-06T22:08:56.194261"
+}
