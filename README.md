@@ -89,6 +89,9 @@ mnist_provenance/
 │   ├── setup_test.py      # Setup verification
 │   ├── run_training.sh    # Training execution script
 │   └── merkle_proof_demo.py  # Merkle proof demonstration
+├── docs/
+│   ├── technical_documentation.md  # Technical documentation
+│   └── user_documentation.md      # User documentation
 ├── data/                  # MNIST dataset storage
 │   ├── train-images-idx3-ubyte.gz
 │   ├── train-labels-idx1-ubyte.gz
@@ -97,79 +100,50 @@ mnist_provenance/
 ├── artifacts/
 │   ├── models/           # Trained model storage
 │   └── provenance/       # Provenance reports
-└── tests/
-    └── test_provenance.py  # Unit tests
+├── tests/                # Unit tests
+├── setup.py             # Package setup configuration
+├── pyproject.toml       # Build system configuration
+└── MANIFEST.in          # Package manifest
 ```
 
-## Data Management
+## Installation
 
-The project automatically manages the MNIST dataset in the `data/` directory:
+### As a Package
 
-### Data Files
-- **Training Data:**
-  - `train-images-idx3-ubyte.gz`: Compressed training images (60,000 samples)
-    - Format: 28x28 grayscale images
-    - Size: ~9.5MB compressed
-    - Content: Raw pixel values (0-255)
-  - `train-labels-idx1-ubyte.gz`: Compressed training labels
-    - Format: Single byte per image
-    - Size: ~28KB compressed
-    - Content: Digit labels (0-9)
+The project can be installed as a Python package:
 
-- **Test Data:**
-  - `t10k-images-idx3-ubyte.gz`: Compressed test images (10,000 samples)
-    - Format: 28x28 grayscale images
-    - Size: ~1.6MB compressed
-    - Content: Raw pixel values (0-255)
-  - `t10k-labels-idx1-ubyte.gz`: Compressed test labels
-    - Format: Single byte per image
-    - Size: ~4.4KB compressed
-    - Content: Digit labels (0-9)
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mnist_provenance.git
+cd mnist_provenance
 
-### File Format Details
-- **Image Files (`*-images-idx3-ubyte.gz`):**
-  - Magic number (4 bytes)
-  - Number of images (4 bytes)
-  - Number of rows (4 bytes)
-  - Number of columns (4 bytes)
-  - Pixel data (rows × columns × number of images bytes)
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Unix/macOS
+# or
+.\venv\Scripts\activate  # On Windows
 
-- **Label Files (`*-labels-idx1-ubyte.gz`):**
-  - Magic number (4 bytes)
-  - Number of labels (4 bytes)
-  - Label data (1 byte per label)
+# Install the package in development mode
+pip install -e .
+```
 
-### Data Processing
-- Images are automatically:
-  - Normalized to [0, 1] range
-  - Reshaped to (N, 1, 28, 28) for PyTorch compatibility
-  - Converted to float32 tensors
-- Labels are:
-  - Converted to long tensors
-  - Used as-is (0-9 values)
+### Package Dependencies
 
-### Automatic Download
-The dataset is automatically downloaded on first run with:
-- Multiple mirror support for reliability
-- Automatic integrity verification
-- Progress tracking during download
-- Error handling for failed downloads
+The package requires the following dependencies:
+- numpy>=1.19.0
+- pandas>=1.2.0
+- torch>=1.7.0
+- tensorflow>=2.4.0
+- scikit-learn>=0.24.0
+- mlflow>=1.20.0
+- blake3>=0.3.0
 
-### Data Provenance
-Each data file is tracked with:
-- File hash for integrity verification
-- Sample count and basic statistics
-- Download source and timestamp
-- Processing steps and transformations
-
-### Usage in Training
-- Training data (60,000 samples) is used for model training
-- Test data (10,000 samples) is used for evaluation
-- Data is loaded in batches (default: 64 samples)
-- Shuffling is enabled for training data
-- Differential privacy is applied during training
-
-## Setup
+Development dependencies:
+- pytest>=6.0
+- black>=21.0
+- isort>=5.0
+- flake8>=3.9
+- mypy>=0.910
 
 ### Automatic Setup
 
@@ -221,10 +195,11 @@ Run the training script:
 ```
 
 This will:
-1. Download MNIST dataset if not present
-2. Train a model with differential privacy
-3. Track all provenance information
-4. Generate a detailed report in the artifacts directory
+1. Install the package in development mode
+2. Download MNIST dataset if not present
+3. Train a model with differential privacy
+4. Track all provenance information
+5. Generate a detailed report in the artifacts directory
 
 ### Training Results
 
