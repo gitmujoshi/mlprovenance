@@ -1,20 +1,31 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
+# Create and activate virtual environment if it doesn't exist
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+fi
+
 # Activate virtual environment
-echo "Activating virtual environment..."
 source venv/bin/activate
 
-# Install the package in development mode
-echo "Installing ml-provenance package..."
+# Install package in development mode
+echo "Installing package in development mode..."
 pip install -e .
+
+# Run the training script
+echo "Running training script..."
+python -m ml_provenance.training.train
+
+# Deactivate virtual environment
+deactivate
 
 # Create necessary directories
 mkdir -p artifacts/provenance
 mkdir -p artifacts/models
-
-# Run training
-echo "Starting training..."
-python -m src.training.train
 
 # Print completion message
 echo "Training completed. Check artifacts/provenance for the latest run." 
