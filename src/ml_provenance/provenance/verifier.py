@@ -1,3 +1,7 @@
+"""
+Provenance verification module.
+"""
+
 import json
 import os
 import sys

@@ -1,5 +1,107 @@
 # Technical Documentation
 
+## Package Structure
+
+The project is organized as a Python package with the following structure:
+
+```
+ml_provenance/
+├── __init__.py
+├── data/
+│   ├── __init__.py
+│   └── mnist_data.py
+├── models/
+│   ├── __init__.py
+│   └── mnist_model.py
+├── provenance/
+│   ├── __init__.py
+│   ├── tracker.py
+│   ├── verifier.py
+│   ├── merkle_tree.py
+│   └── generate_final_report.py
+└── training/
+    ├── __init__.py
+    └── train.py
+```
+
+## Report Generation
+
+The report generation system provides a comprehensive view of the model's provenance and training process. Reports are generated in JSON format and include:
+
+- Timestamp of report generation
+- Model provenance verification results
+- Data provenance verification results
+- Training configuration
+- Overall verification status
+
+### Usage
+
+```python
+from ml_provenance.provenance.generate_final_report import generate_final_report
+
+report_path = generate_final_report(
+    model_path="path/to/model.pt",
+    data_path="path/to/data.pt",
+    training_config={
+        "epochs": 10,
+        "batch_size": 32,
+        "learning_rate": 0.001,
+        "privacy_epsilon": 1.0,
+        "privacy_delta": 1e-5
+    },
+    output_dir="artifacts/provenance"
+)
+```
+
+### Report Structure
+
+The generated report has the following structure:
+
+```json
+{
+    "timestamp": "2024-03-14T12:00:00",
+    "model_provenance": {
+        "verified": true,
+        "hash": "...",
+        "details": {
+            "architecture": "...",
+            "parameters": 123456
+        }
+    },
+    "data_provenance": {
+        "verified": true,
+        "hash": "...",
+        "details": {
+            "dataset": "MNIST",
+            "samples": 60000
+        }
+    },
+    "training_config": {
+        "epochs": 10,
+        "batch_size": 32,
+        "learning_rate": 0.001,
+        "privacy_epsilon": 1.0,
+        "privacy_delta": 1e-5
+    },
+    "verification_status": "PASSED"
+}
+```
+
+### Testing
+
+The report generation system includes comprehensive tests in `tests/test_report_generation.py`. Tests cover:
+
+- Directory and file creation
+- Report structure validation
+- Timestamp format verification
+- Configuration matching
+
+To run the tests:
+
+```bash
+pytest tests/test_report_generation.py -v
+```
+
 ## 1. System Architecture
 
 ### 1.1 Overview

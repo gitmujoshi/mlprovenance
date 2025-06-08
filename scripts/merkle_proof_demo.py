@@ -9,7 +9,8 @@ from pathlib import Path
 project_root = str(Path(__file__).parent.parent)
 sys.path.append(project_root)
 
-from src.provenance.tracker import ProvenanceTracker
+from ml_provenance.provenance.tracker import ProvenanceTracker
+from ml_provenance.provenance.merkle_tree import MerkleTree
 
 def get_latest_provenance_dir(base_dir="artifacts/provenance"):
     """Get the most recent provenance directory."""
