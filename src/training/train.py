@@ -13,18 +13,18 @@ from opacus import PrivacyEngine
 from opacus.validators import ModuleValidator
 from typing import Tuple, Dict, Any
 import torch.nn.functional as F
-from src.models.mnist_model import MNISTModel
-from src.data.mnist_data import get_mnist_data
-from src.provenance.tracker import Tracker
-from src.provenance.verifier import Verifier
-from src.provenance.report_generator import ReportGenerator
+
+# Update imports to use package imports
+from ml_provenance.models.mnist_model import MNISTModel
+from ml_provenance.data.mnist_data import get_mnist_data
+from ml_provenance.provenance.tracker import Tracker, ProvenanceTracker
+from ml_provenance.provenance.verifier import Verifier, ProvenanceVerifier
+from ml_provenance.provenance.report_generator import ReportGenerator
+from ml_provenance.provenance.generate_final_report import generate_final_report
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
-
-from src.provenance.tracker import ProvenanceTracker
-from src.provenance.verifier import ProvenanceVerifier
 
 # URLs for MNIST data
 MNIST_MIRRORS = {
@@ -299,7 +299,6 @@ def main():
     verification_report = verifier.generate_verification_report(model_path=model_dir / "model.pth")
     
     # Generate final report
-    from src.provenance.generate_final_report import generate_final_report
     generate_final_report(
         provenance.provenance_dir,
         model_dir / "model.pth",

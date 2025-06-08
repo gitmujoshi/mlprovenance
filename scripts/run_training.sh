@@ -4,6 +4,10 @@
 echo "Activating virtual environment..."
 source venv/bin/activate
 
+# Install the package in development mode
+echo "Installing ml-provenance package..."
+pip install -e .
+
 # Create necessary directories
 mkdir -p artifacts/provenance
 mkdir -p artifacts/models
