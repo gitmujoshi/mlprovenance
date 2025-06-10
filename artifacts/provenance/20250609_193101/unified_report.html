@@ -1,0 +1,299 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Unified Training Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .run-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 15px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            h2 { color: #333; }
+            h3 { color: #666; }
+            .epoch-table { margin-top: 10px; }
+            .plot-container { 
+                display: flex; 
+                flex-wrap: wrap; 
+                gap: 20px; 
+                margin: 20px 0; 
+            }
+            .plot { 
+                flex: 1; 
+                min-width: 300px; 
+                text-align: center; 
+            }
+            .plot img { 
+                max-width: 100%; 
+                height: auto; 
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Unified Training Report</h1>
+    
+        <div class="run-section">
+            <h2>Run: 20250609_193101</h2>
+        <table>
+<tr><th>Version</th><td>20250609_193101</td></tr>
+<tr><th>Data Provenance</th><td>
+<table>
+<tr><th>Train</th><td>
+<table>
+<tr><th>Samples</th><td>60000</td></tr>
+<tr><th>Mean</th><td>0.1307</td></tr>
+<tr><th>Std</th><td>0.3081</td></tr>
+<tr><th>Hash</th><td>88105458fbeac8a2687f76019d456c284531fcc83fe674f855b44298c2720b08</td></tr>
+<tr><th>Metadata</th><td>
+<table>
+<tr><th>Statistics</th><td>
+<table>
+<tr><th>Mean</th><td>0.1307</td></tr>
+<tr><th>Std</th><td>0.3081</td></tr>
+<tr><th>Min</th><td>0.0000</td></tr>
+<tr><th>Max</th><td>1.0000</td></tr>
+<tr><th>Shape</th><td>
+<p>60000, 28, 28</p>
+</td></tr>
+<tr><th>Dtype</th><td>float32</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+<tr><th>Test</th><td>
+<table>
+<tr><th>Samples</th><td>10000</td></tr>
+<tr><th>Mean</th><td>0.1325</td></tr>
+<tr><th>Std</th><td>0.3105</td></tr>
+<tr><th>Hash</th><td>e09cf9414aeaa6cfd4aa68fb9f2be67ed11b32f490bcbc684024609313f3cdf4</td></tr>
+<tr><th>Metadata</th><td>
+<table>
+<tr><th>Statistics</th><td>
+<table>
+<tr><th>Mean</th><td>0.1325</td></tr>
+<tr><th>Std</th><td>0.3105</td></tr>
+<tr><th>Min</th><td>0.0000</td></tr>
+<tr><th>Max</th><td>1.0000</td></tr>
+<tr><th>Shape</th><td>
+<p>10000, 28, 28</p>
+</td></tr>
+<tr><th>Dtype</th><td>float32</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+<tr><th>Dataset</th><td>MNIST</td></tr>
+<tr><th>Timestamp</th><td>20250609_193101</td></tr>
+<tr><th>Hashes</th><td>
+<table>
+<tr><th>Data</th><td>18afc290e68c30b11411b7ee72dde4ce520fb775006e5119f600c8537c6a00eb</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+<tr><th>Model Provenance</th><td>
+<table>
+<tr><th>Architecture</th><td>
+<table>
+<tr><th>Name</th><td>MNISTModel</td></tr>
+<tr><th>Layers</th><td>
+<table class='epoch-table'>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Parameters</th>
+</tr>
+<tr>
+<td>flatten</td>
+<td>Flatten</td>
+<td>0</td>
+</tr>
+<tr>
+<td>fc1</td>
+<td>Linear</td>
+<td>100480</td>
+</tr>
+<tr>
+<td>relu</td>
+<td>ReLU</td>
+<td>0</td>
+</tr>
+<tr>
+<td>dropout</td>
+<td>Dropout</td>
+<td>0</td>
+</tr>
+<tr>
+<td>fc2</td>
+<td>Linear</td>
+<td>1290</td>
+</tr>
+</table>
+</td></tr>
+<tr><th>Total Parameters</th><td>101770</td></tr>
+<tr><th>Timestamp</th><td>20250609_193101</td></tr>
+</table>
+</td></tr>
+<tr><th>Timestamp</th><td>20250609_193101</td></tr>
+</table>
+</td></tr>
+<tr><th>Training Provenance</th><td>
+<table>
+<tr><th>Epochs</th><td>0</td></tr>
+<tr><th>Batch Size</th><td>64</td></tr>
+<tr><th>Learning Rate</th><td>0.0010</td></tr>
+<tr><th>Training History</th><td>
+<table class='epoch-table'>
+<tr>
+<th>Epoch</th>
+<th>Train Loss</th>
+<th>Val Loss</th>
+<th>Train Acc</th>
+<th>Val Acc</th>
+<th>Is Final</th>
+<th>Privacy Metrics</th>
+</tr>
+<tr>
+<td>1</td>
+<td>1.2266</td>
+<td>1.2266</td>
+<td>0.6514</td>
+<td>0.7905</td>
+<td>False</td>
+<td>{'epsilon': 0.6793925335165759, 'delta': 1e-05, 'noise_multiplier': 1.0, 'privacy_budget': [0.6793925335165759, 0.6931630990809639, 0.7069336646453518, 0.7207042302097397, 0.7344747957741278]}</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0.6037</td>
+<td>0.6037</td>
+<td>0.8051</td>
+<td>0.8618</td>
+<td>False</td>
+<td>{'epsilon': 0.6931630990809639, 'delta': 1e-05, 'noise_multiplier': 1.0, 'privacy_budget': [0.6793925335165759, 0.6931630990809639, 0.7069336646453518, 0.7207042302097397, 0.7344747957741278]}</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.5318</td>
+<td>0.5318</td>
+<td>0.8410</td>
+<td>0.8765</td>
+<td>False</td>
+<td>{'epsilon': 0.7069336646453518, 'delta': 1e-05, 'noise_multiplier': 1.0, 'privacy_budget': [0.6793925335165759, 0.6931630990809639, 0.7069336646453518, 0.7207042302097397, 0.7344747957741278]}</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0.5206</td>
+<td>0.5206</td>
+<td>0.8533</td>
+<td>0.8868</td>
+<td>False</td>
+<td>{'epsilon': 0.7207042302097397, 'delta': 1e-05, 'noise_multiplier': 1.0, 'privacy_budget': [0.6793925335165759, 0.6931630990809639, 0.7069336646453518, 0.7207042302097397, 0.7344747957741278]}</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0.5151</td>
+<td>0.5151</td>
+<td>0.8622</td>
+<td>0.8914</td>
+<td>True</td>
+<td>{'epsilon': 0.7344747957741278, 'delta': 1e-05, 'noise_multiplier': 1.0, 'privacy_budget': [0.6793925335165759, 0.6931630990809639, 0.7069336646453518, 0.7207042302097397, 0.7344747957741278]}</td>
+</tr>
+</table>
+</td></tr>
+<tr><th>Final Metrics</th><td>
+<table>
+<tr><th>Loss</th><td>0.5151</td></tr>
+<tr><th>Train Accuracy</th><td>0.8622</td></tr>
+<tr><th>Test Accuracy</th><td>0.8914</td></tr>
+<tr><th>Training History</th><td>
+<table class='epoch-table'>
+<tr>
+<th>Epoch</th>
+<th>Train Loss</th>
+<th>Val Loss</th>
+<th>Train Acc</th>
+<th>Val Acc</th>
+</tr>
+<tr>
+<td>1</td>
+<td>1.2266</td>
+<td>1.2266</td>
+<td>0.6514</td>
+<td>0.7905</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0.6037</td>
+<td>0.6037</td>
+<td>0.8051</td>
+<td>0.8618</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.5318</td>
+<td>0.5318</td>
+<td>0.8410</td>
+<td>0.8765</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0.5206</td>
+<td>0.5206</td>
+<td>0.8533</td>
+<td>0.8868</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0.5151</td>
+<td>0.5151</td>
+<td>0.8622</td>
+<td>0.8914</td>
+</tr>
+</table>
+</td></tr>
+<tr><th>Privacy Metrics</th><td>
+<table>
+<tr><th>Target Epsilon</th><td>1.0000</td></tr>
+<tr><th>Final Epsilon</th><td>0.7345</td></tr>
+<tr><th>Delta</th><td>0.0000</td></tr>
+<tr><th>Privacy Budget</th><td>
+<p>0.6794, 0.6932, 0.7069, 0.7207, 0.7345</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+<tr><th>Timestamp</th><td>20250609_193101</td></tr>
+</table>
+</td></tr>
+<tr><th>System Info</th><td>
+<table>
+<tr><th>Python Version</th><td>3.11.12 (main, Apr  8 2025, 14:15:29) [Clang 17.0.0 (clang-1700.0.13.3)]</td></tr>
+<tr><th>Torch Version</th><td>2.7.1</td></tr>
+<tr><th>Platform</th><td>
+<table>
+<tr><th>System</th><td>Darwin</td></tr>
+<tr><th>Release</th><td>24.5.0</td></tr>
+<tr><th>Machine</th><td>arm64</td></tr>
+</table>
+</td></tr>
+<tr><th>Opacus Version</th><td>1.1.3</td></tr>
+<tr><th>Timestamp</th><td>20250609_193101</td></tr>
+</table>
+</td></tr>
+<tr><th>Hashes</th><td>
+<table>
+<tr><th>Data</th><td>ce5df309d6271fbf67d27fee0ecf6b71ccd5509d2bc6b29099a16e2d41ec23f6</td></tr>
+<tr><th>Model</th><td>8ef7e7352d19eb610cdf38e91de717c050468fc7b7a5245d25ab47812895057c</td></tr>
+<tr><th>Training</th><td>ab92e789590bf03a73119d81070c60cd8af47d7cbb5e3294618a4e8a20c126d9</td></tr>
+<tr><th>Root</th><td>5946ed33aaeb7428384a98b386b691d66143e7e74fe6ee6a5ce00dcb5ef9334f</td></tr>
+</table>
+</td></tr>
+</table></div>
+    </body>
+    </html>
+    
