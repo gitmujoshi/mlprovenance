@@ -275,3 +275,45 @@ with tracker.track_experiment():
 - Alert configuration
 - Dashboard setup
 - Log management 
+
+## When to Run the Verifier
+
+The verifier in an ML provenance system is used to check the integrity, authenticity, and reproducibility of the data, model, and training process. Here are the key scenarios when you should run the verifier:
+
+### 1. Before Model Deployment
+- **Purpose:** Ensure the model and its training data have not been tampered with and match the expected provenance.
+- **Why:** Prevent deploying a model that may have been altered, corrupted, or trained on unapproved data.
+
+### 2. During Audits or Compliance Checks
+- **Purpose:** Demonstrate to auditors or regulators that the model's lineage and training process are intact and verifiable.
+- **Why:** Many industries (finance, healthcare, etc.) require proof of data and model integrity for compliance.
+
+### 3. After Model Training (for Reproducibility)
+- **Purpose:** Confirm that the training process produced the expected results and that the model can be reproduced from the recorded provenance.
+- **Why:** Ensures scientific rigor and supports claims of reproducibility.
+
+### 4. When Sharing or Transferring Models
+- **Purpose:** Allow recipients to verify that the model and its provenance are authentic and unchanged.
+- **Why:** Builds trust and transparency when models are shared between teams, organizations, or published.
+
+### 5. Before/After Model Updates or Retraining
+- **Purpose:** Verify that updates or retraining have not introduced inconsistencies or errors in the provenance chain.
+- **Why:** Maintains a continuous chain of trust and integrity across model versions.
+
+### 6. When Investigating Anomalies or Incidents
+- **Purpose:** Check if any unauthorized changes or data corruption have occurred that could explain unexpected model behavior.
+- **Why:** Supports root-cause analysis and incident response.
+
+#### Summary Table
+
+| When to Run Verifier          | Why/Goal                                      |
+|------------------------------|-----------------------------------------------|
+| Before deployment            | Ensure integrity before production use         |
+| During audits/compliance     | Satisfy regulatory or internal requirements    |
+| After training               | Confirm reproducibility and correctness        |
+| When sharing/transferring    | Build trust and transparency                   |
+| Before/after updates         | Maintain chain of trust across versions        |
+| During incident investigation| Detect tampering or corruption                 |
+
+**In short:**
+Run the verifier whenever you need to prove, check, or trust the integrity and authenticity of your ML pipeline, especially at critical handoff, deployment, or compliance points. 

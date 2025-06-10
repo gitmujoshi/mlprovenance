@@ -123,11 +123,12 @@ def train_model(
     model.train()
     
     # Initialize tracking
-    training_logs = []
+    training_history = []
     best_accuracy = 0.0
     last_epoch_loss = 0.0
     last_epoch_train_acc = 0.0
     last_epoch_test_acc = 0.0
+    privacy_budget = []
     
     for epoch in range(epochs):
         model.train()
@@ -169,27 +170,39 @@ def train_model(
         print(f'Epoch [{epoch+1}/{epochs}], Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_accuracy:.4f}, Test Accuracy: {test_accuracy:.4f}')
         
         # Get privacy metrics from the privacy engine
+        current_epsilon = privacy_engine.get_epsilon(target_delta)
+        privacy_budget.append(current_epsilon)
         privacy_metrics = {
-            'epsilon': privacy_engine.get_epsilon(target_delta),
+            'epsilon': current_epsilon,
             'delta': target_delta,
-            'noise_multiplier': noise_multiplier
+            'noise_multiplier': noise_multiplier,
+            'privacy_budget': privacy_budget
         }
         
         # Track epoch metrics and model state
         epoch_data = {
             'epoch': epoch + 1,
-            'loss': epoch_loss,
-            'train_accuracy': epoch_accuracy,
-            'test_accuracy': test_accuracy,
+            'train_loss': epoch_loss,
+            'val_loss': epoch_loss,  # Using same loss for now
+            'train_acc': epoch_accuracy,
+            'val_acc': test_accuracy,
             'model_state': model.state_dict(),  # Capture model state
             'is_final': epoch == epochs - 1,
             'privacy_metrics': privacy_metrics
         }
         
+        # Add to training history
+        training_history.append({
+            'epoch': epoch + 1,
+            'train_loss': epoch_loss,
+            'val_loss': epoch_loss,
+            'train_acc': epoch_accuracy,
+            'val_acc': test_accuracy
+        })
+        
         # Update provenance with epoch data
         provenance_tracker.update_training_provenance(epoch_data)
         
-        training_logs.append(epoch_data)
         last_epoch_loss = epoch_loss
         last_epoch_train_acc = epoch_accuracy
         last_epoch_test_acc = test_accuracy
@@ -198,8 +211,13 @@ def train_model(
         'loss': last_epoch_loss,
         'train_accuracy': last_epoch_train_acc,
         'test_accuracy': last_epoch_test_acc,
-        'training_logs': training_logs,
-        'privacy_metrics': privacy_metrics  # Include final privacy metrics
+        'training_history': training_history,
+        'privacy_metrics': {
+            'target_epsilon': config['privacy_parameters']['target_epsilon'],
+            'final_epsilon': privacy_budget[-1] if privacy_budget else 0,
+            'delta': target_delta,
+            'privacy_budget': privacy_budget
+        }
     }
     
     return model, final_metrics
@@ -208,6 +226,11 @@ def main():
     # Set up logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+    
+    # Configure hash function
+    from ml_provenance.provenance.hash_config import HashFactory
+    HashFactory.initialize(hash_algorithm="blake3")  # You can change this to "sha256" or "sha512"
+    logger.info(f"Using hash algorithm: {HashFactory.get_current_algorithm()}")
     
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -300,9 +323,9 @@ def main():
     
     # Generate final report
     generate_final_report(
-        provenance.provenance_dir,
-        model_dir / "model.pth",
-        provenance.provenance_dir / "final_report.md"
+        str(model_dir / "model.pth"),
+        str(provenance.provenance_dir),
+        config
     )
 
 if __name__ == "__main__":

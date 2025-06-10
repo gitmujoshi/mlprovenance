@@ -132,3 +132,39 @@ with tracker.track_experiment(metadata=metadata):
 - Performance monitoring
 - Resource optimization
 - Regular updates 
+
+## When Should You Run the Verifier?
+
+The verifier is a tool that checks the integrity and authenticity of your data, model, and training process. Here are the main situations when you should use it:
+
+1. **Before Deploying a Model**
+   - Make sure your model and data haven't been tampered with before going live.
+
+2. **During Audits or Compliance Checks**
+   - Prove to auditors or regulators that your model's history and data are trustworthy.
+
+3. **After Training a Model**
+   - Confirm that your training process was correct and can be reproduced.
+
+4. **When Sharing or Transferring Models**
+   - Let others verify that the model and its history are authentic and unchanged.
+
+5. **Before or After Model Updates/Retraining**
+   - Ensure that updates or retraining haven't broken the chain of trust.
+
+6. **When Investigating Issues or Anomalies**
+   - Check for unauthorized changes or data corruption if something goes wrong.
+
+**Summary Table:**
+
+| When to Run Verifier         | Why/Goal                                      |
+|-----------------------------|------------------------------------------------|
+| Before deployment           | Ensure integrity before production use         |
+| During audits/compliance    | Satisfy regulatory or internal requirements    |
+| After training              | Confirm reproducibility and correctness        |
+| When sharing/transferring   | Build trust and transparency                   |
+| Before/after updates        | Maintain chain of trust across versions        |
+| During incident investigation| Detect tampering or corruption                |
+
+**In short:**
+Run the verifier whenever you need to check or prove the trustworthiness of your ML pipeline, especially before deployment, during audits, or when sharing models. 

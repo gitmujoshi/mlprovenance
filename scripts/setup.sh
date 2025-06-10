@@ -31,4 +31,5 @@ echo "Running setup test..."
 # Deactivate virtual environment
 deactivate
 
-echo "Setup completed!" 
+echo "Setup completed!"
+echo "To use the environment, run: source venv/bin/activate OR use ./venv/bin/python <your_script.py>" 

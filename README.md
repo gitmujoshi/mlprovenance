@@ -185,6 +185,20 @@ pip install torch==2.7.1 torchvision==0.18.1 --index-url https://download.pytorc
 pip install -r requirements.txt
 ```
 
+## Setup Instructions
+1. Run the setup script:
+   ```sh
+   bash scripts/setup.sh
+   ```
+2. **After setup, activate the virtual environment before running any Python scripts:**
+   ```sh
+   source venv/bin/activate
+   ```
+   Or, use the venv's Python directly:
+   ```sh
+   ./venv/bin/python <your_script.py>
+   ```
+
 ## Usage
 
 ### Running the Training Script
@@ -278,3 +292,6 @@ The verification system provides:
 ## License
 
 MIT License 
+
+## Usage
+- **Tip:** Always make sure your virtual environment is activated before running training or verification scripts. If not, use `./venv/bin/python` to ensure the correct environment is used. 

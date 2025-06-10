@@ -44,6 +44,56 @@ MNIST Provenance
 - **Training Provenance**: Captures training parameters, metrics, and privacy settings
 - **Merkle Tree**: Ensures data integrity through cryptographic verification
 
+### Model State Changes and Verification
+
+#### Model State Evolution During Training
+1. **Initial State**:
+   - Model starts with randomly initialized weights
+   - No learned knowledge
+   - Weights are typically small random numbers
+
+2. **During Training**:
+   - Weights update after each batch
+   - Changes are proportional to learning rate
+   - Updates minimize the loss function
+   - Model goes through multiple states:
+     - Training mode (dropout, batch normalization active)
+     - Evaluation mode (dropout disabled)
+
+3. **State Changes**:
+   - Weights change after every batch
+   - Changes are cumulative across epochs
+   - Different modes affect model behavior
+
+#### Verification Approach
+1. **Architecture Verification**:
+   - Verify model structure hasn't changed
+   - Check layer types and connections
+   - Ensure no layers were added/removed
+
+2. **Training Progress Verification**:
+   - Verify loss decreased over time
+   - Check accuracy improved
+   - Confirm training completed all epochs
+
+3. **Final State Verification**:
+   - Verify final model performance
+   - Check if model meets accuracy thresholds
+   - Ensure model is in evaluation mode
+
+4. **Weight Change Verification**:
+   - Verify weights changed from initial state
+   - Check if changes are within expected ranges
+   - Confirm no weights became NaN or infinite
+
+#### Why This Matters
+- **Reproducibility**: Ensures training process is reproducible
+- **Integrity**: Verifies no malicious changes occurred
+- **Progress**: Confirms model actually learned
+- **Quality**: Ensures model meets performance requirements
+
+Note: Model state changes are not just expected but required for successful training. The verification system should verify these changes are appropriate and beneficial, rather than treating any change as a failure.
+
 #### Reporting System
 - **Training Reports**: Comprehensive training summaries
 - **Verification Reports**: Integrity verification results
@@ -250,7 +300,7 @@ privacy_engine_config = {
 #### 3.6.2 Provenance Tracking Details
 ```python
 provenance_config = {
-    "hash_algorithm": "sha256",   # Hash function
+    "hash_algorithm": "sha256",   # Hash function (options: sha256, blake3, sha512)
     "merkle_tree_depth": 32,      # Tree depth
     "batch_tracking": True,       # Track per-batch
     "privacy_tracking": True,     # Track privacy metrics
@@ -258,7 +308,84 @@ provenance_config = {
 }
 ```
 
-#### 3.6.3 Error Recovery Strategies
+#### 3.6.3 Hash Function Configuration
+The system supports multiple hash algorithms through the `HashConfig` and `HashFactory` classes:
+
+1. **Supported Algorithms**:
+   - SHA-256 (default)
+   - BLAKE3
+   - SHA-512
+
+2. **Configuration**:
+```python
+from ml_provenance.provenance.hash_config import HashFactory
+
+# Initialize with preferred algorithm
+HashFactory.initialize(hash_algorithm="blake3")  # or "sha256" or "sha512"
+
+# Get current algorithm
+current_algorithm = HashFactory.get_current_algorithm()
+```
+
+3. **Usage**:
+   - The configured hash function is used consistently across all components
+   - Affects data hashing, model architecture hashing, training process hashing
+   - Used in Merkle tree node computation
+   - Thread-safe through factory pattern
+
+#### 3.6.4 Merkle Tree Verification
+The system implements a Merkle tree for comprehensive provenance verification:
+
+1. **Tree Structure**:
+   - Root node contains hash of entire provenance
+   - Left subtree: Data provenance (train/test data)
+   - Right subtree: Model and training information
+   - Each node contains its own hash and references to children
+
+2. **Verification Process**:
+   - Component-wise verification (data, model, training)
+   - Hash matching at each level
+   - Architecture validation
+   - Training progression tracking
+   - Privacy budget verification
+
+3. **Model Progression Tracking**:
+   - Architecture changes during training
+   - Weight updates and gradients
+   - Performance metrics per epoch
+   - Privacy budget consumption
+   - Training configuration changes
+
+#### 3.6.5 Report Generation
+The system now includes comprehensive reporting capabilities:
+
+1. **Unified Report**:
+   - HTML-based visualization
+   - Performance metrics plots
+   - Privacy budget consumption
+   - Training progression
+   - Verification status
+   - Hash information
+
+2. **Detailed Provenance Report**:
+   - Run-specific information
+   - Data verification details
+   - Model architecture and parameters
+   - Training configuration
+   - Privacy parameters
+   - Training history
+   - Final metrics
+   - Hash structure
+
+3. **Report Features**:
+   - Interactive HTML tables
+   - Performance plots
+   - Privacy budget visualization
+   - Merkle tree structure
+   - Verification status indicators
+   - Component-wise hash information
+
+#### 3.6.6 Error Recovery Strategies
 1. **Data Loading Errors**
    - Retry with exponential backoff
    - Fallback to cached data

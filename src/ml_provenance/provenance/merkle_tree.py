@@ -4,6 +4,9 @@ import numpy as np
 import torch
 from typing import List, Dict, Any, Optional, Union
 import logging
+from .hash_config import HashFactory
+
+logger = logging.getLogger(__name__)
 
 class MerkleNode:
     """A node in the Merkle tree."""
@@ -155,252 +158,370 @@ class MerkleTree:
             }
         return serialize_node(self.root)
 
-class MLProvenanceMerkleTree(MerkleTree):
-    """A specialized Merkle tree for ML provenance tracking."""
-    def __init__(self):
-        super().__init__()
-        self.nodes = {}
-        self.logger = logging.getLogger(__name__)
+    def get_hash_structure(self):
+        """Return just the hash structure of the tree without leaf node data."""
+        def serialize_hash_structure(node):
+            if node is None:
+                return None
+            return {
+                'hash': node.hash,
+                'left': serialize_hash_structure(node.left),
+                'right': serialize_hash_structure(node.right)
+            }
+        return serialize_hash_structure(self.root)
+
+    def dump_hash_structure(self, filepath=None):
+        """Dump the hash structure to a file or return as string."""
+        hash_structure = self.get_hash_structure()
+        if filepath:
+            with open(filepath, 'w') as f:
+                json.dump(hash_structure, f, indent=2)
+            self.logger.info(f"Hash structure dumped to {filepath}")
+        return json.dumps(hash_structure, indent=2)
+
+class MLProvenanceMerkleTree:
+    """Merkle tree implementation for ML provenance verification."""
     
-    def _hash_data(self, data):
-        # Local utility to ensure all data is JSON serializable
-        def convert_to_serializable(obj):
-            import numpy as np
-            import torch
-            if isinstance(obj, (np.integer, np.floating)):
-                return float(obj)
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, torch.Tensor):
-                return obj.cpu().numpy().tolist()
-            elif isinstance(obj, dict):
-                return {k: convert_to_serializable(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_to_serializable(item) for item in obj]
-            else:
-                return obj
-
-        if isinstance(data, (np.ndarray, torch.Tensor)):
-            # Convert to bytes for hashing
-            if isinstance(data, torch.Tensor):
-                data = data.detach().cpu().numpy()
-            data_bytes = data.tobytes()
-        elif isinstance(data, (dict, list)):
-            serializable_data = convert_to_serializable(data)
-            data_bytes = json.dumps(serializable_data, sort_keys=True).encode()
-        else:
-            data_bytes = str(data).encode()
-        return hashlib.sha256(data_bytes).hexdigest()
-
-    def add_node(self, node_id, data):
-        """Add a node to the tree and rebuild the tree structure."""
-        # Create the node
-        hash_value = self._hash_data(data)
-        node = MerkleNode(data)
-        node.hash = hash_value
+    def __init__(self):
+        """Initialize an empty Merkle tree."""
+        self.root = None
+        self.nodes = {}  # Dictionary to store all nodes by their type
+        self.epoch_nodes = {}  # Store epoch-specific nodes
+        self.architecture_node = None  # Store architecture node separately
+        logger.info("Initialized MLProvenanceMerkleTree")
+    
+    def _compute_hash(self, data: Dict[str, Any]) -> str:
+        """
+        Compute hash of data using configured hash function.
         
-        # Store in nodes dictionary
-        self.nodes[node_id] = {
-            'hash': hash_value,
-            'data': data,
-            'node': node
+        Args:
+            data: Data to hash
+            
+        Returns:
+            Hex digest of the hash
+        """
+        def _serialize_data(obj):
+            try:
+                if isinstance(obj, torch.Tensor):
+                    return obj.detach().cpu().numpy().tolist()
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                elif isinstance(obj, (np.integer, np.floating)):
+                    return float(obj)
+                elif isinstance(obj, dict):
+                    return {str(k): _serialize_data(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [_serialize_data(x) for x in obj]
+                elif hasattr(obj, '__dict__'):
+                    return _serialize_data(obj.__dict__)
+                elif isinstance(obj, (str, int, float, bool, type(None))):
+                    return obj
+                else:
+                    return str(obj)
+            except Exception as e:
+                logger.warning(f"Failed to serialize object of type {type(obj)}: {str(e)}")
+                return str(obj)
+
+        try:
+            # Get hash function from factory
+            hash_func = HashFactory.get_hash_function()
+            
+            # Serialize data to bytes, handling tensors
+            serialized_data = _serialize_data(data)
+            data_bytes = json.dumps(serialized_data, sort_keys=True).encode()
+            
+            # Compute hash
+            return hash_func(data_bytes)
+        except Exception as e:
+            logger.error(f"Error computing hash: {str(e)}")
+            raise
+    
+    def add_node(self, data: Dict[str, Any], parent: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Add a node to the Merkle tree.
+        
+        Args:
+            data: Data to store in the node
+            parent: Optional parent node
+            
+        Returns:
+            Created node
+        """
+        node = {
+            "data": data,
+            "hash": self._compute_hash(data),
+            "left": None,
+            "right": None,
+            "parent": parent
         }
         
-        # Rebuild tree with all nodes
-        self._rebuild_tree()
+        # Store node in nodes dictionary if it has a type
+        if "type" in data:
+            self.nodes[data["type"]] = node
         
-        return hash_value
+        if parent is None:
+            self.root = node
+        else:
+            if parent["left"] is None:
+                parent["left"] = node
+            else:
+                parent["right"] = node
+        
+        logger.info(f"Added node with hash: {node['hash']}")
+        return node
     
-    def _rebuild_tree(self):
-        """Rebuild the tree structure from stored nodes."""
-        if not self.nodes:
-            self.root = None
-            return
+    def add_epoch_node(self, epoch: int, data: Dict[str, Any]):
+        """
+        Add a node for a specific training epoch.
         
-        # Get all nodes in order
-        node_list = []
-        for node_id in sorted(self.nodes.keys()):
-            node_list.append(self.nodes[node_id]['node'])
+        Args:
+            epoch: Epoch number
+            data: Epoch data
+        """
+        node = self.add_node(data)
+        self.epoch_nodes[epoch] = node
+        logger.info(f"Added epoch {epoch} node with hash: {node['hash']}")
+    
+    def add_architecture_node(self, data: Dict[str, Any]):
+        """
+        Add a node for model architecture.
         
-        # Build tree levels
-        while len(node_list) > 1:
-            new_level = []
-            for i in range(0, len(node_list), 2):
-                left = node_list[i]
-                right = node_list[i + 1] if i + 1 < len(node_list) else None
-                
-                # Create parent node
-                parent = MerkleNode()
-                parent.left = left
-                parent.right = right
-                
-                # Calculate parent hash
-                if right:
-                    parent.hash = self._combine_hashes(left.hash, right.hash)
-                else:
-                    parent.hash = left.hash
-                
-                new_level.append(parent)
-            node_list = new_level
+        Args:
+            data: Architecture data
+        """
+        self.architecture_node = self.add_node(data)
+        logger.info(f"Added architecture node with hash: {self.architecture_node['hash']}")
+    
+    def verify_component(self, component: str, data: Dict[str, Any]) -> bool:
+        """
+        Verify a component's data against its stored hash.
         
-        self.root = node_list[0]
-        self.logger.info(f"Rebuilt Merkle tree with root hash: {self.root.hash}")
-
-    def get_proof(self, node_id):
-        """Get a proof for a specific node."""
-        if node_id not in self.nodes:
+        Args:
+            component: Component name
+            data: Component data to verify
+            
+        Returns:
+            True if verification passes, False otherwise
+        """
+        if component == "architecture" and self.architecture_node:
+            stored_hash = self.architecture_node["hash"]
+        elif component in self.epoch_nodes:
+            stored_hash = self.epoch_nodes[component]["hash"]
+        else:
+            logger.error(f"Component {component} not found in Merkle tree")
+            return False
+        
+        computed_hash = self._compute_hash(data)
+        matches = computed_hash == stored_hash
+        
+        logger.info(f"Verified {component} component: {'✓' if matches else '✗'}")
+        logger.info(f"Stored hash: {stored_hash}")
+        logger.info(f"Computed hash: {computed_hash}")
+        
+        return matches
+    
+    def verify_model_progression(self) -> Dict[str, Any]:
+        """
+        Verify that model changes follow expected progression through epochs.
+        
+        Returns:
+            Dictionary containing verification results
+        """
+        results = {
+            "verified": True,
+            "mismatched_epochs": []
+        }
+        
+        # Sort epochs to ensure ordered verification
+        epochs = sorted(self.epoch_nodes.keys())
+        
+        for i in range(1, len(epochs)):
+            prev_epoch = epochs[i-1]
+            curr_epoch = epochs[i]
+            
+            prev_data = self.epoch_nodes[prev_epoch]["data"]
+            curr_data = self.epoch_nodes[curr_epoch]["data"]
+            
+            # Verify that current epoch's data is different from previous
+            if prev_data == curr_data:
+                results["verified"] = False
+                results["mismatched_epochs"].append(curr_epoch)
+                logger.warning(f"Model state unchanged between epochs {prev_epoch} and {curr_epoch}")
+        
+        return results
+    
+    def get_epoch_proof(self, epoch: int) -> Optional[List[Dict[str, Any]]]:
+        """
+        Get Merkle proof for a specific epoch.
+        
+        Args:
+            epoch: Epoch number
+            
+        Returns:
+            List of nodes in the proof path, or None if epoch not found
+        """
+        if epoch not in self.epoch_nodes:
+            logger.error(f"Epoch {epoch} not found in Merkle tree")
             return None
         
-        node = self.nodes[node_id]['node']
         proof = []
+        current = self.epoch_nodes[epoch]
         
-        def find_proof(current_node, target_node):
-            if not current_node:
-                return False
+        while current["parent"]:
+            parent = current["parent"]
+            sibling = parent["right"] if current == parent["left"] else parent["left"]
             
-            if current_node == target_node:
-                return True
+            if sibling:
+                proof.append({
+                    "hash": sibling["hash"],
+                    "is_left": current == parent["right"]
+                })
             
-            if current_node.left and find_proof(current_node.left, target_node):
-                if current_node.right:
-                    proof.append({
-                        'position': 'right',
-                        'hash': current_node.right.hash
-                    })
-                return True
-            
-            if current_node.right and find_proof(current_node.right, target_node):
-                if current_node.left:
-                    proof.append({
-                        'position': 'left',
-                        'hash': current_node.left.hash
-                    })
-                return True
-            
-            return False
+            current = parent
         
-        if find_proof(self.root, node):
+        return proof
+    
+    def get_tree_dict(self) -> Dict[str, Any]:
+        """
+        Get dictionary representation of the tree.
+        
+        Returns:
+            Dictionary containing tree structure
+        """
+        def node_to_dict(node: Dict[str, Any]) -> Dict[str, Any]:
+            if node is None:
+                return None
+            
             return {
-                'node_id': node_id,
-                'hash': node.hash,
-                'proof': proof
+                "hash": node["hash"],
+                "data": node["data"],
+                "left": node_to_dict(node["left"]),
+                "right": node_to_dict(node["right"])
             }
-        return None
+        
+        return node_to_dict(self.root)
 
-    def verify_proof(self, proof):
-        """Verify a proof for a node."""
-        if not proof or 'node_id' not in proof or 'hash' not in proof:
-            return False
+    def build_provenance_tree(self, data_provenance: Dict[str, Any], model_provenance: Dict[str, Any], training_provenance: Dict[str, Any]) -> None:
+        """
+        Build the Merkle tree from provenance data.
         
-        node_id = proof['node_id']
-        if node_id not in self.nodes:
-            return False
+        Args:
+            data_provenance: Dictionary containing data provenance
+            model_provenance: Dictionary containing model provenance
+            training_provenance: Dictionary containing training provenance
+        """
+        logger.info("Building provenance Merkle tree...")
         
-        node = self.nodes[node_id]['node']
-        if node.hash != proof['hash']:
-            return False
+        # Create data node
+        data_node = self.add_node({
+            "type": "data",
+            "data": data_provenance
+        })
         
-        if 'proof' not in proof:
-            return True
+        # Create model node
+        model_node = self.add_node({
+            "type": "model",
+            "data": model_provenance
+        })
         
-        current_hash = node.hash
-        for step in proof['proof']:
-            if step['position'] == 'left':
-                current_hash = self._combine_hashes(step['hash'], current_hash)
-            else:
-                current_hash = self._combine_hashes(current_hash, step['hash'])
+        # Create training node
+        training_node = self.add_node({
+            "type": "training",
+            "data": training_provenance
+        })
         
-        return current_hash == self.root.hash
-    
-    def track_training_run(self, 
-                          data_provenance: Dict[str, Any],
-                          model_provenance: Dict[str, Any],
-                          training_provenance: Dict[str, Any]) -> str:
-        """Track a complete training run using a Merkle tree."""
-        # Create leaf nodes for each component
-        leaves = [
-            {
-                'type': 'data',
-                'content': data_provenance
-            },
-            {
-                'type': 'model',
-                'content': model_provenance
-            },
-            {
-                'type': 'training',
-                'content': training_provenance
+        # Create root node combining all components
+        self.root = self.add_node({
+            "type": "root",
+            "data": {
+                "data": data_node,
+                "model": model_node,
+                "training": training_node
             }
-        ]
+        })
         
-        # Create leaf nodes with proper hashing
-        leaf_nodes = []
-        for leaf in leaves:
-            node = MerkleNode(leaf)
-            leaf_nodes.append(node)
+        logger.info("Provenance Merkle tree built successfully")
+        logger.info(f"Root hash: {self.root['hash']}")
+
+    def get_node(self, node_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a node by its type.
         
-        # Build the tree
-        while len(leaf_nodes) > 1:
-            new_level = []
-            for i in range(0, len(leaf_nodes), 2):
-                left = leaf_nodes[i]
-                right = leaf_nodes[i + 1] if i + 1 < len(leaf_nodes) else None
-                
-                # Create parent node
-                parent = MerkleNode()
-                parent.left = left
-                parent.right = right
-                
-                # Calculate parent hash
-                if right:
-                    parent.hash = self._combine_hashes(left.hash, right.hash)
-                else:
-                    parent.hash = left.hash
-                
-                new_level.append(parent)
-            leaf_nodes = new_level
-        
-        self.root = leaf_nodes[0]
-        root_hash = self.root.hash
-        
-        self.logger.info(f"Tracked training run with root hash: {root_hash}")
-        return root_hash
-    
-    def verify_component(self, component_name, component_data):
-        """Verify a component using the Merkle tree."""
-        if not self.root:
-            return False
+        Args:
+            node_type: Type of the node to retrieve
             
-        # Create a node for the component data
-        component_node = {
-            'type': component_name,
-            'content': component_data
+        Returns:
+            Node dictionary if found, None otherwise
+        """
+        return self.nodes.get(node_type)
+
+    def get_root_hash(self) -> str:
+        """Get the root hash of the Merkle tree."""
+        if self.root is None:
+            raise ValueError("Merkle tree has not been built yet")
+        return self.root["hash"]
+
+    def get_component_proof(self, component: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the Merkle proof for a specific component.
+        
+        Args:
+            component: Component to get proof for ("data", "model", or "training")
+            
+        Returns:
+            Dictionary containing the proof, or None if component not found
+        """
+        if self.root is None:
+            return None
+            
+        if component not in ["data", "model", "training"]:
+            raise ValueError(f"Invalid component: {component}")
+            
+        # Find the component node
+        component_node = self.nodes.get(component)
+        if component_node is None:
+            return None
+            
+        # Build the proof
+        proof = {
+            "component": component,
+            "hash": component_node.get("hash"),
+            "siblings": []
         }
-        node = MerkleNode(component_node)
         
-        # Find the component in the tree
-        def find_component(node, target_type):
-            if not node:
-                return False
-            if isinstance(node.data, dict) and node.data.get('type') == target_type:
-                return node.hash == self._hash_data(component_node)
-            return find_component(node.left, target_type) or find_component(node.right, target_type)
+        # Add sibling hashes
+        for sibling in ["data", "model", "training"]:
+            if sibling != component:
+                sibling_node = self.nodes.get(sibling)
+                if sibling_node is not None:
+                    proof["siblings"].append({
+                        "type": sibling,
+                        "hash": sibling_node.get("hash")
+                    })
         
-        return find_component(self.root, component_name)
-    
-    def get_provenance_proof(self, 
-                           component_type: str,
-                           component_data: Dict[str, Any]) -> Optional[List[Dict[str, str]]]:
-        """Get a Merkle proof for a specific component."""
-        component = {
-            'type': component_type,
-            'content': component_data
-        }
-        
-        proof = self.generate_proof(component)
-        if proof:
-            self.logger.info(f"Generated proof for component: {component_type}")
-        else:
-            self.logger.warning(f"No proof found for component: {component_type}")
-        
-        return proof 
+        return proof
+
+    def _dump_merkle_tree(self) -> None:
+        """Dump the Merkle tree structure for debugging."""
+        if self.root is None:
+            logger.warning("Merkle tree is empty")
+            return
+            
+        def _dump_node(node, level=0):
+            indent = "  " * level
+            if node is None:
+                return f"{indent}None"
+                
+            node_str = f"{indent}Node:\n"
+            node_str += f"{indent}  Hash: {node.get('hash')}\n"
+            node_str += f"{indent}  Type: {node.get('data', {}).get('type')}\n"
+            
+            if node.get("left"):
+                node_str += f"{indent}  Left:\n{_dump_node(node['left'], level + 2)}\n"
+            if node.get("right"):
+                node_str += f"{indent}  Right:\n{_dump_node(node['right'], level + 2)}\n"
+                
+            return node_str
+            
+        tree_str = _dump_node(self.root)
+        logger.debug(f"Merkle Tree Structure:\n{tree_str}") 

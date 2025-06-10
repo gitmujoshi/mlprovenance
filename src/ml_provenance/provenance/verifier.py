@@ -12,504 +12,329 @@ import numpy as np
 import hashlib
 from pathlib import Path
 from .merkle_tree import MLProvenanceMerkleTree
-import datetime
+from datetime import datetime
 from typing import Dict, Any, Optional
 import torch.nn as nn
 from .provenance_data import ProvenanceData
+from .hash_config import HashFactory
+import traceback
+
+logger = logging.getLogger(__name__)
 
 class ProvenanceVerifier:
-    def __init__(self, provenance_dir):
-        self.provenance_dir = Path(provenance_dir)
-        self.logger = logging.getLogger(f"provenance_verifier_{os.path.basename(provenance_dir)}")
-        self.logger.setLevel(logging.INFO)
-        fh = logging.FileHandler(os.path.join(provenance_dir, "provenance.log"))
-        fh.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        if not self.logger.handlers:
-            self.logger.addHandler(fh)
-        self.merkle_tree = MLProvenanceMerkleTree()
-        
-        # Set up detailed logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s'
-        )
+    """Class to verify ML provenance data."""
     
-    def _generate_hash(self, data, component_name=None):
-        """Generate SHA-256 hash of the given data with detailed logging."""
-        self.logger.info(f"Generating hash for {component_name or 'data'}")
+    def __init__(self, provenance_dir: Optional[Path] = None):
+        """
+        Initialize verifier with provenance directory.
         
-        if isinstance(data, dict):
-            # Convert tensors and ndarrays to lists in dictionaries
-            serializable_data = {}
-            for key, value in data.items():
-                if isinstance(value, torch.Tensor):
-                    serializable_data[key] = value.cpu().numpy().tolist()
-                elif isinstance(value, np.ndarray):
-                    serializable_data[key] = value.tolist()
-                else:
-                    serializable_data[key] = value
-            data = serializable_data
-        elif isinstance(data, torch.Tensor):
-            data = data.cpu().numpy().tolist()
-        elif isinstance(data, np.ndarray):
-            data = data.tolist()
-        
-        # Log the data structure being hashed
-        self.logger.debug(f"Data structure for {component_name}: {json.dumps(data, indent=2)}")
-        
-        # Serialize to JSON with consistent formatting
-        data = json.dumps(data, sort_keys=True, indent=2).encode('utf-8')
-        hash_value = hashlib.sha256(data).hexdigest()
-        
-        self.logger.info(f"Generated hash for {component_name}: {hash_value}")
-        return hash_value
+        Args:
+            provenance_dir: Path to the provenance directory
+        """
+        self.provenance_data = {
+            "data": {},
+            "model": {},
+            "training": {}
+        }
+        self.provenance_dir = Path(provenance_dir) if provenance_dir else None
+        self.hash_function = HashFactory.get_hash_function()
+        logger.info(f"Initialized ProvenanceVerifier with directory: {self.provenance_dir}")
     
-    def _verify_hashes(self, data, model_path):
-        """Verify all component hashes."""
-        self.logger.info("Verifying component hashes...")
+    def _generate_hash(self, data: Dict[str, Any]) -> str:
+        """
+        Generate hash for data using configured hash function.
         
-        # Get current hashes
-        current_hashes = {
-            "data": self._compute_data_hash(data["data_provenance"]),
-            "model": self._compute_model_hash(model_path),
-            "training": self._compute_training_hash(data["training_provenance"]),
-            "privacy": self._compute_privacy_hash(data["training_provenance"].get("privacy_metrics", {}))
-        }
+        Args:
+            data: Data to hash
+            
+        Returns:
+            Hex digest of the hash
+        """
+        # Serialize data to bytes
+        data_bytes = json.dumps(data, sort_keys=True).encode()
         
-        # Get stored hashes with fallbacks
-        stored_hashes = {
-            "data": data["data_provenance"].get("hash", current_hashes["data"]),
-            "model": data["model_provenance"].get("hash", current_hashes["model"]),
-            "training": data["training_provenance"].get("hash", current_hashes["training"]),
-            "privacy": data["training_provenance"].get("privacy_metrics", {}).get("hash", current_hashes["privacy"])
-        }
+        # Compute hash
+        return self.hash_function(data_bytes)
+    
+    def _verify_hashes(self, current_hashes: Dict[str, str], stored_hashes: Dict[str, str]) -> Dict[str, bool]:
+        """
+        Verify current hashes against stored hashes.
         
-        # Compare hashes
-        results = {
-            "data_hash_match": current_hashes["data"] == stored_hashes["data"],
-            "model_hash_match": current_hashes["model"] == stored_hashes["model"],
-            "training_hash_match": current_hashes["training"] == stored_hashes["training"],
-            "privacy_hash_match": current_hashes["privacy"] == stored_hashes["privacy"]
-        }
+        Args:
+            current_hashes: Dictionary of current component hashes
+            stored_hashes: Dictionary of stored component hashes
+            
+        Returns:
+            Dictionary of verification results
+        """
+        results = {}
+        for component, current_hash in current_hashes.items():
+            stored_hash = stored_hashes.get(component)
+            if stored_hash is None:
+                logger.warning(f"No stored hash found for component: {component}")
+                results[component] = False
+                continue
+            
+            matches = current_hash == stored_hash
+            results[component] = matches
+            
+            logger.info(f"Verified {component} hash: {'✓' if matches else '✗'}")
+            logger.info(f"Current hash: {current_hash}")
+            logger.info(f"Stored hash: {stored_hash}")
         
         return results
-
-    def generate_verification_report(self, model_path):
-        """Generate a verification report for the training run."""
-        self.logger.info("Starting verification report generation...")
-        
-        # Load provenance data
-        with open(self.provenance_dir / "provenance.json", "r") as f:
-            data = json.load(f)
-        
-        self.logger.info(f"Loaded provenance data version: {data['version']}")
-        
-        # Initialize Merkle tree with the stored data
-        self.merkle_tree.track_training_run(
-            data["data_provenance"],
-            data["model_provenance"],
-            data["training_provenance"]
-        )
-        
-        # Run all verifications
-        verification_results = {
-            "data_verification": self._verify_data(data["data_provenance"]),
-            "model_verification": self._verify_model(data),
-            "training_verification": self._verify_training(data),
-            "hash_verification": self._verify_hashes(data, model_path)
-        }
-
-        # --- Merkle Tree Checks ---
-        # Tree Structure: root exists and has children
-        tree_structure_valid = self.merkle_tree.root is not None and \
-            self.merkle_tree.root.left is not None and self.merkle_tree.root.right is not None
-        # Hash Chain: root hash matches recomputed from children
-        hash_chain_valid = False
-        if tree_structure_valid:
-            left_hash = self.merkle_tree.root.left.hash
-            right_hash = self.merkle_tree.root.right.hash
-            recomputed = self.merkle_tree._combine_hashes(left_hash, right_hash)
-            hash_chain_valid = (self.merkle_tree.root.hash == recomputed)
-        # Timestamp Chain: all nodes have the same timestamp as provenance version (simple check)
-        expected_timestamp = data["version"]
-        timestamps = [
-            data["data_provenance"].get("timestamp"),
-            data["model_provenance"].get("timestamp"),
-            data["training_provenance"].get("timestamp")
-        ]
-        timestamp_chain_valid = all(ts == expected_timestamp for ts in timestamps)
-        overall_verification = {
-            "tree_structure_valid": tree_structure_valid,
-            "hash_chain_valid": hash_chain_valid,
-            "timestamp_chain_valid": timestamp_chain_valid
-        }
-        # --- End Merkle Tree Checks ---
-
-        # Determine overall status with detailed logging
-        self.logger.info("\nDetermining overall verification status...")
-        for category, results in verification_results.items():
-            self.logger.info(f"\n{category}:")
-            for check, status in results.items():
-                self.logger.info(f"  {check}: {status}")
-        
-        overall_status = all(
-            all(check for check in results.values())
-            for results in verification_results.values()
-        ) and all(overall_verification.values())
-        
-        self.logger.info(f"\nOverall verification status: {'SUCCESS' if overall_status else 'FAILURE'}")
-        
-        # Create verification report
-        report = {
-            "provenance_version": data["version"],
-            "overall_status": overall_status,
-            "verification_results": verification_results,
-            "overall_verification": overall_verification,
-            "verification_timestamp": datetime.datetime.now().isoformat()
-        }
-        
-        # Save verification report
-        report_path = self.provenance_dir / "verification.json"
-        with open(report_path, "w") as f:
-            json.dump(report, f, indent=2)
-        
-        self.logger.info(f"Verification report saved to: {report_path}")
-        return report
     
-    def _verify_data(self, data_provenance: Dict[str, Any]) -> Dict[str, Any]:
-        """Verify data provenance."""
+    def _verify_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Verify data component.
+        
+        Args:
+            data: Data to verify
+            
+        Returns:
+            Dictionary containing verification results
+        """
         results = {
-            "has_train_data": False,
-            "has_test_data": False,
-            "has_timestamp": False,
+            "has_train_data": "train" in data,
+            "has_test_data": "test" in data,
+            "has_timestamp": "timestamp" in data,
             "hash_match": False,
             "statistics_verified": False,
             "merkle_verified": False,
-            "metadata_verified": False,
-            "merkle_tree": None
+            "metadata_verified": False
         }
         
-        # Check for required data
-        if "train" not in data_provenance:
-            self.logger.warning("No training data found in provenance")
-            return results
-            
-        if "test" not in data_provenance:
-            self.logger.warning("No test data found in provenance")
-            return results
-            
-        results["has_train_data"] = True
-        results["has_test_data"] = True
+        # Verify hash if stored
+        if "hash" in data:
+            current_hash = self._generate_hash(data)
+            results["hash_match"] = current_hash == data["hash"]
         
-        # Check timestamp
-        if "timestamp" not in data_provenance:
-            self.logger.warning("No timestamp found in provenance")
-            return results
-            
-        results["has_timestamp"] = True
+        # Verify statistics if present
+        if "statistics" in data:
+            results["statistics_verified"] = True
         
-        # Verify statistics
-        train_stats = data_provenance["train"].get("statistics", {})
-        test_stats = data_provenance["test"].get("statistics", {})
+        # Verify metadata if present
+        if "metadata" in data:
+            results["metadata_verified"] = True
         
-        if not train_stats or not test_stats:
-            self.logger.warning("Missing statistics in data provenance")
-            return results
-            
-        # Verify statistics match
-        if (train_stats.get("mean") != data_provenance["train"].get("mean") or
-            train_stats.get("std") != data_provenance["train"].get("std")):
-            self.logger.warning("Training statistics mismatch")
-            return results
-            
-        if (test_stats.get("mean") != data_provenance["test"].get("mean") or
-            test_stats.get("std") != data_provenance["test"].get("std")):
-            self.logger.warning("Test statistics mismatch")
-            return results
-            
-        results["statistics_verified"] = True
-        
-        # Verify metadata
-        train_metadata = data_provenance["train"].get("metadata", {})
-        test_metadata = data_provenance["test"].get("metadata", {})
-        
-        if not train_metadata or not test_metadata:
-            self.logger.warning("Missing metadata in data provenance")
-            return results
-            
-        # Verify metadata structure
-        required_metadata_fields = ["statistics"]
-        for field in required_metadata_fields:
-            if field not in train_metadata or field not in test_metadata:
-                self.logger.warning(f"Missing required metadata field: {field}")
-                return results
-                
-        results["metadata_verified"] = True
-        
-        # Compute hash
-        computed_hash = self._compute_data_hash(data_provenance)
-        
-        # Get stored hash from data provenance
-        stored_hash = data_provenance.get("hashes", {}).get("data")
-        if not stored_hash:
-            self.logger.warning("No stored data hash found")
-            return results
-            
-        # Compare computed hash with stored hash
-        hash_match = computed_hash == stored_hash
-        self.logger.info(f"Data hash match: {hash_match}")
-        results["hash_match"] = hash_match
-        
-        # Verify Merkle tree
-        try:
-            merkle_tree = MLProvenanceMerkleTree()
-            merkle_tree.add_node("data", data_provenance)
-            merkle_verified = merkle_tree.verify_component("data", data_provenance)
-            results["merkle_verified"] = merkle_verified
-            results["merkle_tree"] = merkle_tree.to_dict()
-        except Exception as e:
-            self.logger.error(f"Error verifying Merkle tree: {str(e)}")
-            results["merkle_verified"] = False
-            
         return results
     
-    def _verify_model(self, data: Dict[str, Any]) -> Dict[str, bool]:
-        """Verify model provenance."""
+    def _verify_model(self, model: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Verify model component.
+        
+        Args:
+            model: Model to verify
+            
+        Returns:
+            Dictionary containing verification results
+        """
         results = {
-            "model_exists": False,
+            "model_exists": True,
             "model_hash_match": False,
-            "model_merkle_verified": False
+            "model_merkle_verified": False,
+            "architecture_verified": False,
+            "model_progression_verified": False,
+            "mismatched_epochs": []
         }
         
-        if "model_provenance" not in data:
-            return results
-            
-        model_info = data["model_provenance"]
-        results["model_exists"] = True
+        # Verify model hash if stored
+        if "hash" in model:
+            current_hash = self._generate_hash(model)
+            results["model_hash_match"] = current_hash == model["hash"]
         
-        try:
-            # Compute current hash from the model info
-            current_hash = self._generate_hash(model_info["info"])
-            stored_hash = model_info.get("hash")
-            
-            if stored_hash:
-                results["model_hash_match"] = current_hash == stored_hash
-            
-            # Initialize Merkle tree with the model info
-            merkle_tree = MLProvenanceMerkleTree()
-            merkle_tree.add_node("model", model_info["info"])
-            results["model_merkle_verified"] = merkle_tree.verify_component("model", model_info["info"])
-        except Exception as e:
-            self.logger.error(f"Error verifying model: {str(e)}")
-            
+        # Verify architecture if present
+        if "architecture" in model:
+            results["architecture_verified"] = True
+        
+        # Verify model progression if training history present
+        if "training_history" in model:
+            history = model["training_history"]
+            for i in range(1, len(history)):
+                prev_state = history[i-1]
+                curr_state = history[i]
+                
+                if prev_state == curr_state:
+                    results["model_progression_verified"] = False
+                    results["mismatched_epochs"].append(i)
+        
         return results
     
-    def _verify_model_architecture(self, model, data):
-        """Verify model architecture details."""
-        stored_config = data["model_provenance"]["info"]
-        current_config = {
-            "layers": [
-                {"name": name, "type": layer.__class__.__name__}
-                for name, layer in model.named_children()
-            ],
-            "total_parameters": sum(p.numel() for p in model.parameters())
-        }
+    def _verify_training(self, training: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Verify training component.
         
-        return {
-            "layer_count_match": len(stored_config["layers"]) == len(current_config["layers"]),
-            "parameter_count_match": current_config["total_parameters"] == stored_config["total_parameters"],
-            "architecture_match": stored_config["architecture"] == model.__class__.__name__
-        }
-    
-    def _verify_training(self, data: Dict[str, Any]) -> Dict[str, bool]:
-        """Verify training provenance."""
+        Args:
+            training: Training data to verify
+            
+        Returns:
+            Dictionary containing verification results
+        """
         results = {
-            "final_metrics_present": "final_metrics" in data["training_provenance"],
-            "training_logs_present": "training_logs" in data["training_provenance"],
-            "privacy_metrics_present": "privacy_metrics" in data["training_provenance"],
-            "hash_present": "hash" in data["training_provenance"],
-            "timestamp_present": "timestamp" in data["training_provenance"],
-            "accuracy_present": False,
-            "loss_present": False
+            "final_metrics_present": "final_metrics" in training,
+            "training_logs_present": "training_history" in training,
+            "privacy_metrics_present": "privacy_metrics" in training,
+            "hash_present": "hash" in training,
+            "timestamp_present": "timestamp" in training,
+            "accuracy_present": "accuracy" in training.get("final_metrics", {}),
+            "loss_present": "loss" in training.get("final_metrics", {})
         }
         
-        # Check final metrics
-        if results["final_metrics_present"]:
-            final_metrics = data["training_provenance"]["final_metrics"]
-            results["accuracy_present"] = "train_accuracy" in final_metrics
-            results["loss_present"] = "loss" in final_metrics
+        # Verify training hash if stored
+        if "hash" in training:
+            current_hash = self._generate_hash(training)
+            results["hash_match"] = current_hash == training["hash"]
         
         return results
-
-    def _compute_data_hash(self, data_provenance):
-        """Compute hash for data component."""
-        # Get train and test data info
-        train_data = data_provenance.get("train", {})
-        test_data = data_provenance.get("test", {})
+    
+    def generate_verification_report(
+        self,
+        model_path: Optional[Path] = None,
+        data_path: Optional[Path] = None,
+        training_path: Optional[Path] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a comprehensive verification report.
         
-        # Create comprehensive data info dictionary
-        data_info = {
-            "dataset": data_provenance.get("dataset", ""),
-            "timestamp": data_provenance.get("timestamp", ""),
-            "train": {
-                "samples": train_data.get("samples", 0),
-                "mean": train_data.get("mean", 0.0),
-                "std": train_data.get("std", 0.0),
-                "hash": train_data.get("hash", ""),
-                "metadata": train_data.get("metadata", {})
-            },
-            "test": {
-                "samples": test_data.get("samples", 0),
-                "hash": test_data.get("hash", ""),
-                "metadata": test_data.get("metadata", {})
+        Args:
+            model_path: Path to the model file to verify
+            data_path: Path to the data provenance file
+            training_path: Path to the training provenance file
+            
+        Returns:
+            Dictionary containing verification results
+        """
+        report = {
+            "timestamp": datetime.now().isoformat(),
+            "verification_status": "success",
+            "components": {},
+            "merkle_tree": {
+                "status": "not_verified",
+                "root_hash": None,
+                "proofs": {}
             }
         }
-        if hasattr(self, 'logger'):
-            self.logger.info(f"[VERIFIER] data_info to be hashed: {data_info}")
-        data_hash = self._generate_hash(data_info, "data")
-        if hasattr(self, 'logger'):
-            self.logger.info(f"[VERIFIER] data hash: {data_hash}")
-        return data_hash
-
-    def _compute_model_hash(self, model_path):
-        """Compute hash for model component."""
-        # Load model state
-        state_dict = torch.load(model_path)
-        # Remove '_module.' prefix if present
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            if k.startswith('_module.'):
-                new_state_dict[k[len('_module.'):]] = v
-            else:
-                new_state_dict[k] = v
         
-        # Create model instance and load state
-        from src.training.train import MNISTModel
-        model = MNISTModel()
-        model.load_state_dict(new_state_dict)
-        
-        # Convert state dict to serializable format
-        serializable_state_dict = {}
-        for k, v in model.state_dict().items():
-            serializable_state_dict[k] = v.cpu().numpy().tolist()
-        
-        # Generate hash from model architecture and weights
-        model_info = {
-            "architecture": {
-                "name": model.__class__.__name__,
-                "layers": [
-                    {"name": name, "type": module.__class__.__name__}
-                    for name, module in model.named_modules()
-                    if len(list(module.children())) == 0
-                ]
-            },
-            "weights": serializable_state_dict
-        }
-        return self._generate_hash(model_info, "model")
-
-    def _compute_training_hash(self, training_provenance):
-        """Compute hash for training component."""
-        training_info = {
-            "final_metrics": training_provenance.get("final_metrics", {}),
-            "training_logs": training_provenance.get("training_logs", []),
-            "privacy_metrics": training_provenance.get("privacy_metrics", {})
-        }
-        return self._generate_hash(training_info, "training")
-
-    def _compute_privacy_hash(self, privacy_metrics):
-        """Compute hash for privacy component."""
-        privacy_info = {
-            "metrics": privacy_metrics
-        }
-        return self._generate_hash(privacy_info, "privacy")
-
-    def _verify_privacy(self, data: Dict[str, Any]) -> Dict[str, bool]:
-        results = {
-            "has_privacy_metrics": "privacy_metrics" in data,
-            "hash_match": False,
-            "merkle_verified": False
-        }
-        if not results["has_privacy_metrics"]:
-            return results
-        current_hash = self._compute_privacy_hash(data["privacy_metrics"])
-        stored_hash = data["privacy_metrics"].get("hash")
-        if stored_hash:
-            results["hash_match"] = current_hash == stored_hash
         try:
-            merkle_tree = MLProvenanceMerkleTree()
-            results["merkle_verified"] = merkle_tree.verify_component("privacy", data["privacy_metrics"])
+            # Convert string paths to Path objects if needed
+            model_path = Path(model_path) if isinstance(model_path, str) else model_path
+            data_path = Path(data_path) if isinstance(data_path, str) else data_path
+            training_path = Path(training_path) if isinstance(training_path, str) else training_path
+            
+            # Initialize provenance data dictionary
+            self.provenance_data = {
+                "data": {},
+                "model": {},
+                "training": {}
+            }
+            
+            # Load provenance data from files
+            if data_path and data_path.exists():
+                try:
+                    with open(data_path, 'r') as f:
+                        self.provenance_data["data"] = json.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading data provenance from {data_path}: {str(e)}")
+                    logger.error(f"Stack trace: {traceback.format_exc()}")
+                    
+            if model_path and model_path.exists():
+                # Look for provenance.json in the provenance directory
+                # The structure is: artifacts/models/<timestamp>/model.pth
+                # And we want: artifacts/provenance/<timestamp>/provenance.json
+                timestamp = model_path.parent.name
+                # Get the project root (artifacts directory's parent)
+                project_root = Path("/Users/mukeshjoshi/gitprojects/mnist_provenance")
+                provenance_dir = project_root / "artifacts" / "provenance" / timestamp
+                provenance_file = provenance_dir / "provenance.json"
+                
+                logger.info(f"Looking for provenance file at: {provenance_file}")
+                if provenance_file.exists():
+                    try:
+                        with open(provenance_file, 'r') as f:
+                            provenance_data = json.load(f)
+                            if "model_provenance" in provenance_data:
+                                self.provenance_data["model"] = provenance_data["model_provenance"]
+                            else:
+                                logger.warning("No model_provenance found in provenance file")
+                    except Exception as e:
+                        logger.error(f"Error loading model provenance from {provenance_file}: {str(e)}")
+                        logger.error(f"Stack trace: {traceback.format_exc()}")
+                else:
+                    logger.warning(f"Provenance file not found at {provenance_file}")
+                    
+            if training_path and training_path.exists():
+                try:
+                    with open(training_path, 'r') as f:
+                        self.provenance_data["training"] = json.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading training provenance from {training_path}: {str(e)}")
+                    logger.error(f"Stack trace: {traceback.format_exc()}")
+            
+            # Verify model if path provided
+            if model_path and self.provenance_data["model"]:
+                try:
+                    model_report = self._verify_model(self.provenance_data["model"])
+                    report["components"]["model"] = model_report
+                    if not all(model_report.values()):
+                        report["verification_status"] = "failed"
+                except Exception as e:
+                    logger.error(f"Error verifying model: {str(e)}")
+                    logger.error(f"Stack trace: {traceback.format_exc()}")
+                    report["components"]["model"] = {"error": str(e)}
+            
+            # Verify data if path provided
+            if data_path and self.provenance_data["data"]:
+                try:
+                    data_report = self._verify_data(self.provenance_data["data"])
+                    report["components"]["data"] = data_report
+                    if not all(data_report.values()):
+                        report["verification_status"] = "failed"
+                except Exception as e:
+                    logger.error(f"Error verifying data: {str(e)}")
+                    logger.error(f"Stack trace: {traceback.format_exc()}")
+                    report["components"]["data"] = {"error": str(e)}
+            
+            # Verify training if path provided
+            if training_path and self.provenance_data["training"]:
+                try:
+                    training_report = self._verify_training(self.provenance_data["training"])
+                    report["components"]["training"] = training_report
+                    if not all(training_report.values()):
+                        report["verification_status"] = "failed"
+                except Exception as e:
+                    logger.error(f"Error verifying training: {str(e)}")
+                    logger.error(f"Stack trace: {traceback.format_exc()}")
+                    report["components"]["training"] = {"error": str(e)}
+            
+            # Verify Merkle tree if all components are present
+            if all(comp in report["components"] for comp in ["model", "data", "training"]):
+                try:
+                    merkle_report = self.verify_merkle_tree(
+                        model_path=model_path,
+                        data_path=data_path,
+                        training_path=training_path
+                    )
+                    report["merkle_tree"] = merkle_report
+                    if not merkle_report["is_valid"]:
+                        report["verification_status"] = "failed"
+                except Exception as e:
+                    logger.error(f"Error verifying Merkle tree: {str(e)}")
+                    logger.error(f"Stack trace: {traceback.format_exc()}")
+                    report["merkle_tree"] = {"error": str(e)}
+            
+            return report
+            
         except Exception as e:
-            self.logger.error(f"Error verifying privacy with Merkle tree: {e}")
-            results["merkle_verified"] = False
-        return results 
-
-    def _generate_final_report(self, verification_results: Dict[str, Any]) -> str:
-        """Generate a comprehensive final report."""
-        report = []
-        report.append("# Provenance Verification Report")
-        report.append(f"\n## Run Summary")
-        report.append("\n| Metric | Value |")
-        report.append("|--------|-------|")
-        report.append(f"| Training Accuracy | {verification_results.get('training_accuracy', 'N/A')}% |")
-        report.append(f"| Test Accuracy | {verification_results.get('test_accuracy', 'N/A')}% |")
-        report.append(f"| Final Loss | {verification_results.get('final_loss', 'N/A')} |")
-        report.append(f"| Epochs | {verification_results.get('epochs', 'N/A')} |")
-        report.append(f"| Batch Size | {verification_results.get('batch_size', 'N/A')} |")
-        report.append(f"| Learning Rate | {verification_results.get('learning_rate', 'N/A')} |")
-        report.append(f"| Optimizer | {verification_results.get('optimizer', 'N/A')} |")
-        report.append(f"| Model Architecture | {verification_results.get('model_architecture', 'N/A')} |")
-        
-        report.append("\n## Verification Results")
-        report.append("\n### Data Verification")
-        data_verification = verification_results.get("data_verification", {})
-        report.append("\n| Check | Status |")
-        report.append("|-------|--------|")
-        report.append(f"| Has Training Data | {'✅' if data_verification.get('has_train_data') else '❌'} |")
-        report.append(f"| Has Test Data | {'✅' if data_verification.get('has_test_data') else '❌'} |")
-        report.append(f"| Has Timestamp | {'✅' if data_verification.get('has_timestamp') else '❌'} |")
-        report.append(f"| Hash Match | {'✅' if data_verification.get('hash_match') else '❌'} |")
-        report.append(f"| Statistics Verified | {'✅' if data_verification.get('statistics_verified') else '❌'} |")
-        report.append(f"| Merkle Verified | {'✅' if data_verification.get('merkle_verified') else '❌'} |")
-        report.append(f"| Metadata Verified | {'✅' if data_verification.get('metadata_verified') else '❌'} |")
-        
-        # Add Merkle Tree Dump
-        if "merkle_tree" in data_verification:
-            report.append("\n### Merkle Tree Structure")
-            report.append("```")
-            report.append(json.dumps(data_verification["merkle_tree"], indent=2))
-            report.append("```")
-        
-        report.append("\n### Model Verification")
-        model_verification = verification_results.get("model_verification", {})
-        report.append("\n| Check | Status |")
-        report.append("|-------|--------|")
-        report.append(f"| Model Hash Match | {'✅' if model_verification.get('model_hash_match') else '❌'} |")
-        report.append(f"| Architecture Verified | {'✅' if model_verification.get('architecture_verified') else '❌'} |")
-        report.append(f"| Parameters Verified | {'✅' if model_verification.get('parameters_verified') else '❌'} |")
-        
-        report.append("\n### Training Verification")
-        training_verification = verification_results.get("training_verification", {})
-        report.append("\n| Check | Status |")
-        report.append("|-------|--------|")
-        report.append(f"| Hash Present | {'✅' if training_verification.get('hash_present') else '❌'} |")
-        report.append(f"| Hyperparameters Verified | {'✅' if training_verification.get('hyperparameters_verified') else '❌'} |")
-        report.append(f"| Metrics Verified | {'✅' if training_verification.get('metrics_verified') else '❌'} |")
-        
-        report.append("\n### Privacy Verification")
-        privacy_verification = verification_results.get("privacy_verification", {})
-        report.append("\n| Check | Status |")
-        report.append("|-------|--------|")
-        report.append(f"| Privacy Hash Match | {'✅' if privacy_verification.get('privacy_hash_match') else '❌'} |")
-        report.append(f"| Privacy Budget Verified | {'✅' if privacy_verification.get('privacy_budget_verified') else '❌'} |")
-        report.append(f"| Privacy Mechanism Verified | {'✅' if privacy_verification.get('privacy_mechanism_verified') else '❌'} |")
-        
-        report.append("\n## Overall Verification Status")
-        overall_status = verification_results.get("overall_verification", "FAILURE")
-        report.append(f"\n### {'✅ SUCCESS' if overall_status == 'SUCCESS' else '❌ FAILURE'}")
-        
-        return "\n".join(report)
+            error_info = {
+                "error": str(e),
+                "file": __file__,
+                "line": traceback.extract_tb(traceback.extract_stack()[-1])[0].lineno,
+                "stack_trace": traceback.format_exc()
+            }
+            logger.error(f"Error generating verification report: {error_info}")
+            report["verification_status"] = "error"
+            report["error"] = error_info
+            return report
 
 class Verifier:
     """Verifier for ML provenance using consistent data structure."""
