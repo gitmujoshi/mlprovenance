@@ -1,15 +1,17 @@
 --find-links https://download.pytorch.org/whl/torch_stable.html
-torch==2.3.1
+torch>=2.0.0
 torchvision==0.18.1
 opacus==1.1.3
 numpy==1.26.4
 scikit-learn==1.4.1.post1
 python-docx==1.1.0
-tqdm==4.66.2
+tqdm>=4.65.0
 psutil==5.9.8
 gitpython==3.1.42
 pytest==8.0.2
 pandas==2.2.1
 matplotlib==3.8.3
 seaborn==0.13.2
-jinja2==3.1.3 
+jinja2==3.1.3
+transformers>=4.30.0
+datasets>=2.12.0 
