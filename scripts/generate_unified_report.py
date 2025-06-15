@@ -430,6 +430,70 @@ def generate_html_report(runs_info: dict, output_dir: Path):
         f.write(html_content)
     logger.info(f"HTML report generated successfully at: {output_dir}/unified_report.html")
 
+def generate_markdown_report(runs_info: dict, output_dir: Path):
+    """Generate Markdown report from runs information."""
+    logger.info(f"Generating Markdown report for {len(runs_info)} runs")
+    
+    def format_value(value):
+        if isinstance(value, float):
+            return f"{value:.4f}"
+        elif isinstance(value, list):
+            if len(value) > 0 and isinstance(value[0], (int, float)):
+                return f"{value[-1]:.4f}"
+            return str(value)
+        return str(value)
+
+    def generate_section(data, title=None, level=3):
+        md = []
+        prefix = '#' * level
+        if title:
+            md.append(f"\n{prefix} {title}\n")
+        if isinstance(data, dict):
+            if all(isinstance(k, int) for k in data.keys()):
+                # List-like dict, make a table
+                if data:
+                    first_item = next(iter(data.values()))
+                    if isinstance(first_item, dict):
+                        headers = ['Index'] + [k.replace('_', ' ').title() for k in first_item.keys()]
+                        md.append('|' + '|'.join(headers) + '|')
+                        md.append('|' + '|'.join(['---'] * len(headers)) + '|')
+                        for idx, item in data.items():
+                            row = [str(idx)] + [format_value(v) for v in item.values()]
+                            md.append('|' + '|'.join(row) + '|')
+            else:
+                for key, value in data.items():
+                    if isinstance(value, (dict, list)):
+                        md.extend(generate_section(value, key.replace('_', ' ').title(), level + 1))
+                    else:
+                        md.append(f"- **{key.replace('_', ' ').title()}**: {format_value(value)}")
+        elif isinstance(data, list):
+            if data and isinstance(data[0], dict):
+                headers = [k.replace('_', ' ').title() for k in data[0].keys()]
+                md.append('|' + '|'.join(headers) + '|')
+                md.append('|' + '|'.join(['---'] * len(headers)) + '|')
+                for item in data:
+                    row = [format_value(v) for v in item.values()]
+                    md.append('|' + '|'.join(row) + '|')
+            else:
+                md.append(', '.join(format_value(v) for v in data))
+        return md
+
+    md_content = "# Unified Training Report\n"
+    for run_id, run_info in runs_info.items():
+        md_content += f"\n## Run: {run_id}\n"
+        # Add plots if they exist
+        performance_plot = output_dir / f"{run_id}_performance.png"
+        privacy_plot = output_dir / f"{run_id}_privacy.png"
+        if performance_plot.exists():
+            md_content += f"\n![Performance Metrics]({performance_plot.name})\n"
+        if privacy_plot.exists():
+            md_content += f"\n![Privacy Budget]({privacy_plot.name})\n"
+        md_content += '\n'.join(generate_section(run_info, level=3))
+        md_content += "\n---\n"
+    with open(output_dir / "unified_report.md", "w") as f:
+        f.write(md_content)
+    logger.info(f"Markdown report generated successfully at: {output_dir}/unified_report.md")
+
 def generate_detailed_report(run_id: str, run_info: Dict[str, Any], output_dir: Path) -> None:
     """Generate a detailed report for a run."""
     report_path = output_dir / f"{run_id}_detailed_report.md"
@@ -540,10 +604,11 @@ def main():
             generate_detailed_report(run_id, run_info, run_dir)
             generate_plots(run_id, run_info, run_dir)
     
-    # Generate HTML report in the latest run's directory
+    # Generate HTML and Markdown reports in the latest run's directory
     if run_ids:
         latest_run_dir = Path(f"artifacts/provenance/{run_ids[0]}")
         generate_html_report(runs_info, latest_run_dir)
+        generate_markdown_report(runs_info, latest_run_dir)
         logger.info(f"Unified report generation completed. Output directory: {latest_run_dir}")
 
 if __name__ == "__main__":
