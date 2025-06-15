@@ -72,15 +72,32 @@ def generate():
             'violations': safety_result['violations']
         }), 400
 
-    # Generate text
-    inputs = tokenizer.encode(prompt, return_tensors='pt')
+    # Generate text with proper attention mask and padding
+    inputs = tokenizer(
+        prompt,
+        return_tensors='pt',
+        padding=True,
+        truncation=True,
+        max_length=512,
+        add_special_tokens=True
+    )
+    
+    # Move inputs to the same device as the model
+    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+    
+    # Generate with proper configuration
     outputs = model.generate(
-        inputs,
+        **inputs,
         max_new_tokens=100,
         num_return_sequences=1,
         no_repeat_ngram_size=2,
-        temperature=0.7
+        do_sample=True,
+        top_k=50,
+        top_p=0.95,
+        pad_token_id=tokenizer.eos_token_id,
+        eos_token_id=tokenizer.eos_token_id
     )
+    
     generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Safety check on output

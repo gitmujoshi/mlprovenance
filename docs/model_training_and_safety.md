@@ -330,6 +330,183 @@ The Merkle tree is constructed as follows:
    - Implement rate limiting
    - Log all validation attempts
 
+#### Safety Verification with Merkle Trees
+
+The Merkle tree includes a dedicated `safety_metrics` section that allows users to verify that the model meets all safety requirements. This is crucial for ensuring that deployed applications maintain the safety standards established during training.
+
+1. **Safety Metrics Structure**
+   ```json
+   {
+     "safety_metrics": {
+       "content_warnings": "number of content warnings generated",
+       "failed_checks": "number of failed safety checks",
+       "passed_checks": "number of passed safety checks",
+       "total_checks": "total number of safety checks performed"
+     }
+   }
+   ```
+
+2. **Verifying Safety Requirements**
+   ```python
+   from ml_provenance.provenance.tracker import Tracker
+   from ml_provenance.safety.verifier import SafetyVerifier
+   
+   def verify_model_safety(model_path, provenance_path):
+       # Initialize components
+       tracker = Tracker()
+       verifier = SafetyVerifier()
+       
+       # Load provenance data
+       provenance_data = tracker.load_provenance(provenance_path)
+       
+       # Get safety metrics from Merkle tree
+       safety_metrics = tracker.get_safety_metrics()
+       
+       # Verify safety requirements
+       safety_report = verifier.verify_safety_requirements(
+           safety_metrics,
+           min_pass_rate=0.95,  # Minimum required pass rate
+           max_content_warnings=100,  # Maximum allowed content warnings
+           required_checks=['age_rating', 'content_filter', 'sensitive_topics']
+       )
+       
+       return safety_report
+   ```
+
+3. **Safety Verification Report**
+   ```python
+   def generate_safety_report(safety_metrics):
+       report = {
+           "overall_status": "PASS" if safety_metrics["passed_checks"] / safety_metrics["total_checks"] >= 0.95 else "FAIL",
+           "metrics": {
+               "pass_rate": f"{safety_metrics['passed_checks'] / safety_metrics['total_checks']:.2%}",
+               "content_warnings": safety_metrics["content_warnings"],
+               "failed_checks": safety_metrics["failed_checks"]
+           },
+           "requirements": {
+               "min_pass_rate": "95%",
+               "max_content_warnings": "100",
+               "required_checks": ["age_rating", "content_filter", "sensitive_topics"]
+           }
+       }
+       return report
+   ```
+
+4. **Continuous Safety Monitoring**
+   ```python
+   class SafetyMonitor:
+       def __init__(self, model_path, provenance_path):
+           self.tracker = Tracker()
+           self.verifier = SafetyVerifier()
+           self.provenance_data = self.tracker.load_provenance(provenance_path)
+           
+       def monitor_safety(self, input_text):
+           # Get current safety metrics
+           current_metrics = self.tracker.get_current_safety_metrics()
+           
+           # Compare with training metrics
+           safety_status = self.verifier.compare_with_training(
+               current_metrics,
+               self.provenance_data["safety_metrics"]
+           )
+           
+           # Alert if safety standards are not met
+           if not safety_status["meets_standards"]:
+               self.alert_safety_violation(safety_status)
+           
+           return safety_status
+   ```
+
+#### Safety Requirements Verification
+
+1. **Pre-deployment Verification**
+   ```python
+   def verify_deployment_requirements(model_path, provenance_path):
+       # Load model and provenance
+       model = load_model(model_path)
+       provenance = load_provenance(provenance_path)
+       
+       # Verify safety metrics
+       safety_metrics = provenance["safety_metrics"]
+       if safety_metrics["passed_checks"] / safety_metrics["total_checks"] < 0.95:
+           raise SafetyVerificationError("Model does not meet minimum safety requirements")
+       
+       # Verify content warning rate
+       if safety_metrics["content_warnings"] > 100:
+           raise SafetyVerificationError("Content warning rate exceeds acceptable threshold")
+       
+       return True
+   ```
+
+2. **Runtime Safety Monitoring**
+   ```python
+   class RuntimeSafetyMonitor:
+       def __init__(self, model, safety_config):
+           self.model = model
+           self.safety_config = safety_config
+           self.metrics = SafetyMetrics()
+           
+       def check_input(self, input_text):
+           # Check input against safety requirements
+           safety_result = self.model.safety_checker.check_input(input_text)
+           
+           # Update metrics
+           self.metrics.update(safety_result)
+           
+           # Verify against training metrics
+           if not self.verify_against_training():
+               raise RuntimeSafetyError("Safety metrics deviate from training standards")
+           
+           return safety_result
+   ```
+
+3. **Safety Compliance Reporting**
+   ```python
+   def generate_compliance_report(model_path, provenance_path):
+       # Load model and provenance
+       model = load_model(model_path)
+       provenance = load_provenance(provenance_path)
+       
+       # Generate compliance report
+       report = {
+           "model_id": model.model_id,
+           "safety_metrics": {
+               "pass_rate": f"{provenance['safety_metrics']['passed_checks'] / provenance['safety_metrics']['total_checks']:.2%}",
+               "content_warnings": provenance["safety_metrics"]["content_warnings"],
+               "failed_checks": provenance["safety_metrics"]["failed_checks"]
+           },
+           "compliance_status": {
+               "meets_requirements": True,
+               "verified_by": "Merkle Tree Validation",
+               "verification_timestamp": datetime.now().isoformat()
+           }
+       }
+       
+       return report
+   ```
+
+#### Best Practices for Safety Verification
+
+1. **Regular Verification**
+   - Verify safety metrics before each deployment
+   - Monitor safety metrics during runtime
+   - Schedule periodic full safety audits
+
+2. **Compliance Documentation**
+   - Maintain detailed safety verification reports
+   - Document any safety incidents or violations
+   - Keep track of safety metric trends
+
+3. **Automated Monitoring**
+   - Implement continuous safety monitoring
+   - Set up alerts for safety metric deviations
+   - Automate safety verification in CI/CD pipeline
+
+4. **User Safety Guidelines**
+   - Provide clear safety requirements documentation
+   - Include safety verification instructions
+   - Document safety incident response procedures
+
 ### 4. Safety Features
 
 The safety system includes:
@@ -487,4 +664,566 @@ Common issues and solutions:
 
 ## Contact
 
-[Add your contact information here] 
+[Add your contact information here]
+
+#### Safety Verification Scenarios
+
+1. **Pre-deployment Verification**
+   ```python
+   # Example: Verifying model before deployment
+   def verify_model_deployment(model_path, provenance_path):
+       # Load model and provenance
+       model = load_model(model_path)
+       provenance = load_provenance(provenance_path)
+       
+       # Verify safety metrics
+       safety_metrics = provenance["safety_metrics"]
+       
+       # Check pass rate
+       pass_rate = safety_metrics["passed_checks"] / safety_metrics["total_checks"]
+       if pass_rate < 0.95:
+           raise SafetyVerificationError(f"Pass rate {pass_rate:.2%} below threshold 95%")
+       
+       # Check content warnings
+       if safety_metrics["content_warnings"] > 100:
+           raise SafetyVerificationError(f"Content warnings {safety_metrics['content_warnings']} exceed limit 100")
+       
+       # Verify specific safety checks
+       required_checks = ["age_rating", "content_filter", "sensitive_topics"]
+       for check in required_checks:
+           if check not in safety_metrics["passed_checks"]:
+               raise SafetyVerificationError(f"Missing required safety check: {check}")
+       
+       return True
+   ```
+
+2. **Runtime Safety Monitoring**
+   ```python
+   # Example: Monitoring safety during model inference
+   class RuntimeSafetyMonitor:
+       def __init__(self, model, safety_config):
+           self.model = model
+           self.safety_config = safety_config
+           self.metrics = SafetyMetrics()
+           self.alert_threshold = 0.90  # 90% pass rate threshold
+           
+       def check_input(self, input_text):
+           # Check input against safety requirements
+           safety_result = self.model.safety_checker.check_input(input_text)
+           
+           # Update metrics
+           self.metrics.update(safety_result)
+           
+           # Check against thresholds
+           current_pass_rate = self.metrics.get_pass_rate()
+           if current_pass_rate < self.alert_threshold:
+               self.alert_safety_violation({
+                   "type": "pass_rate_below_threshold",
+                   "current_rate": current_pass_rate,
+                   "threshold": self.alert_threshold
+               })
+           
+           return safety_result
+   ```
+
+3. **Safety Incident Response**
+   ```python
+   # Example: Handling safety incidents
+   class SafetyIncidentHandler:
+       def __init__(self, model_path, provenance_path):
+           self.model = load_model(model_path)
+           self.provenance = load_provenance(provenance_path)
+           self.incident_log = []
+           
+       def handle_safety_incident(self, incident):
+           # Log incident
+           self.incident_log.append({
+               "timestamp": datetime.now().isoformat(),
+               "incident": incident,
+               "model_state": self.get_model_state()
+           })
+           
+           # Check if incident requires model rollback
+           if self.should_rollback(incident):
+               self.rollback_model()
+               
+           # Generate incident report
+           report = self.generate_incident_report(incident)
+           
+           # Notify stakeholders
+           self.notify_stakeholders(report)
+           
+           return report
+   ```
+
+#### Safety Verification Diagrams
+
+1. **Safety Verification Flow**
+   ```
+   [Model Training] → [Safety Metrics Collection] → [Merkle Tree Generation]
+          ↓
+   [Pre-deployment Verification] → [Deployment Decision]
+          ↓
+   [Runtime Monitoring] → [Safety Metrics Tracking]
+          ↓
+   [Incident Detection] → [Response & Mitigation]
+   ```
+
+2. **Safety Metrics Structure**
+   ```
+   Safety Metrics
+   ├── Content Warnings
+   │   ├── Age Rating
+   │   ├── Content Filter
+   │   └── Sensitive Topics
+   ├── Passed Checks
+   │   ├── Required Checks
+   │   └── Optional Checks
+   ├── Failed Checks
+   │   ├── Critical Failures
+   │   └── Non-critical Failures
+   └── Total Checks
+       ├── Training Checks
+       └── Runtime Checks
+   ```
+
+#### CI/CD Integration
+
+1. **GitHub Actions Workflow**
+   ```yaml
+   # .github/workflows/safety-verification.yml
+   name: Model Safety Verification
+   
+   on:
+     push:
+       branches: [ main ]
+     pull_request:
+       branches: [ main ]
+   
+   jobs:
+     safety-verification:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v2
+         
+         - name: Set up Python
+           uses: actions/setup-python@v2
+           with:
+             python-version: '3.9'
+             
+         - name: Install dependencies
+           run: |
+             python -m pip install --upgrade pip
+             pip install -r requirements.txt
+             
+         - name: Run safety verification
+           run: |
+             python scripts/verify_safety.py \
+               --model-path artifacts/models/latest \
+               --provenance-path artifacts/provenance/latest.json \
+               --min-pass-rate 0.95 \
+               --max-content-warnings 100
+   ```
+
+2. **Jenkins Pipeline**
+   ```groovy
+   // Jenkinsfile
+   pipeline {
+       agent any
+       
+       stages {
+           stage('Safety Verification') {
+               steps {
+                   sh '''
+                       python scripts/verify_safety.py \
+                           --model-path ${MODEL_PATH} \
+                           --provenance-path ${PROVENANCE_PATH} \
+                           --min-pass-rate 0.95 \
+                           --max-content-warnings 100
+                   '''
+               }
+           }
+           
+           stage('Deployment') {
+               when {
+                   expression { 
+                       return currentBuild.result == 'SUCCESS' 
+                   }
+               }
+               steps {
+                   sh '''
+                       python scripts/deploy_model.py \
+                           --model-path ${MODEL_PATH} \
+                           --provenance-path ${PROVENANCE_PATH}
+                   '''
+               }
+           }
+       }
+       
+       post {
+           failure {
+               emailext (
+                   subject: "Safety Verification Failed",
+                   body: "Safety verification failed for model ${MODEL_PATH}",
+                   to: 'team@example.com'
+               )
+           }
+       }
+   }
+   ```
+
+3. **Automated Safety Testing**
+   ```python
+   # tests/test_safety_verification.py
+   import pytest
+   from ml_provenance.safety.verifier import SafetyVerifier
+   
+   @pytest.fixture
+   def safety_verifier():
+       return SafetyVerifier()
+   
+   def test_safety_metrics_verification(safety_verifier):
+       # Test case 1: Valid safety metrics
+       valid_metrics = {
+           "content_warnings": 50,
+           "passed_checks": 950,
+           "total_checks": 1000
+       }
+       assert safety_verifier.verify_metrics(valid_metrics) == True
+       
+       # Test case 2: Invalid safety metrics
+       invalid_metrics = {
+           "content_warnings": 150,
+           "passed_checks": 800,
+           "total_checks": 1000
+       }
+       assert safety_verifier.verify_metrics(invalid_metrics) == False
+   
+   def test_runtime_safety_monitoring(safety_verifier):
+       # Test case: Runtime safety monitoring
+       input_text = "Test input"
+       safety_result = safety_verifier.check_input(input_text)
+       
+       assert "content_warnings" in safety_result
+       assert "passed_checks" in safety_result
+       assert safety_result["passed_checks"] >= 0
+   ```
+
+#### Safety Verification Best Practices
+
+1. **Automated Testing**
+   - Implement unit tests for safety verification
+   - Add integration tests for safety monitoring
+   - Include safety tests in CI/CD pipeline
+
+2. **Monitoring and Alerting**
+   - Set up real-time safety monitoring
+   - Configure alerts for safety violations
+   - Implement automated incident response
+
+3. **Documentation and Reporting**
+   - Maintain detailed safety verification logs
+   - Generate regular safety reports
+   - Document safety incidents and responses
+
+4. **Continuous Improvement**
+   - Regularly review safety thresholds
+   - Update safety checks based on new requirements
+   - Incorporate feedback from safety incidents
+
+## Additional Safety Features
+
+1. **Safety Verification Scenarios**
+   - Pre-deployment verification
+   - Runtime monitoring
+   - Safety incident response
+
+2. **Safety Verification Diagrams**
+   - Safety verification flow
+   - Safety metrics structure
+
+3. **CI/CD Integration**
+   - GitHub Actions workflow
+   - Jenkins pipeline
+   - Automated safety testing
+
+4. **Safety Verification Best Practices**
+   - Automated testing
+   - Monitoring and alerting
+   - Documentation and reporting
+   - Continuous improvement
+
+#### Safety Incident Scenarios and Handling
+
+1. **Content Warning Threshold Exceeded**
+   ```python
+   # Example: Handling excessive content warnings
+   class ContentWarningHandler:
+       def __init__(self, threshold=100):
+           self.threshold = threshold
+           self.warning_log = []
+           
+       def handle_content_warning(self, warning):
+           self.warning_log.append({
+               "timestamp": datetime.now().isoformat(),
+               "warning": warning,
+               "severity": self.calculate_severity(warning)
+           })
+           
+           if len(self.warning_log) > self.threshold:
+               return {
+                   "action": "block_generation",
+                   "reason": "Content warning threshold exceeded",
+                   "warnings": self.warning_log[-10:],  # Last 10 warnings
+                   "total_warnings": len(self.warning_log)
+               }
+           return {"action": "continue", "warning_count": len(self.warning_log)}
+   ```
+
+2. **Safety Check Failure**
+   ```python
+   # Example: Handling safety check failures
+   class SafetyCheckHandler:
+       def __init__(self, model, provenance):
+           self.model = model
+           self.provenance = provenance
+           self.failure_log = []
+           
+       def handle_safety_failure(self, failure):
+           # Log failure
+           self.failure_log.append({
+               "timestamp": datetime.now().isoformat(),
+               "failure_type": failure["type"],
+               "details": failure["details"],
+               "model_state": self.get_model_state()
+           })
+           
+           # Check if failure is critical
+           if self.is_critical_failure(failure):
+               return {
+                   "action": "rollback",
+                   "reason": "Critical safety check failure",
+                   "failure_details": failure,
+                   "recommended_action": "Model rollback required"
+               }
+           
+           # For non-critical failures
+           return {
+               "action": "warn",
+               "reason": "Non-critical safety check failure",
+               "failure_details": failure,
+               "recommended_action": "Monitor and log"
+           }
+   ```
+
+3. **Model Drift Detection**
+   ```python
+   # Example: Handling model drift
+   class ModelDriftHandler:
+       def __init__(self, baseline_metrics, drift_threshold=0.1):
+           self.baseline_metrics = baseline_metrics
+           self.drift_threshold = drift_threshold
+           self.drift_log = []
+           
+       def detect_drift(self, current_metrics):
+           drift_scores = {}
+           for metric in self.baseline_metrics:
+               drift = abs(current_metrics[metric] - self.baseline_metrics[metric])
+               drift_scores[metric] = drift
+               
+               if drift > self.drift_threshold:
+                   self.drift_log.append({
+                       "timestamp": datetime.now().isoformat(),
+                       "metric": metric,
+                       "drift": drift,
+                       "baseline": self.baseline_metrics[metric],
+                       "current": current_metrics[metric]
+                   })
+           
+           return {
+               "has_drift": any(drift > self.drift_threshold for drift in drift_scores.values()),
+               "drift_scores": drift_scores,
+               "drift_log": self.drift_log
+           }
+   ```
+
+#### Detailed Safety Verification Diagrams
+
+1. **Safety Incident Response Flow**
+   ```
+   [Incident Detection]
+          ↓
+   [Severity Assessment]
+          ↓
+   [Critical?] → No → [Log & Monitor]
+          ↓ Yes
+   [Immediate Actions]
+          ↓
+   [Model State Check]
+          ↓
+   [Rollback Required?] → No → [Mitigation Actions]
+          ↓ Yes
+   [Model Rollback]
+          ↓
+   [Incident Report]
+          ↓
+   [Stakeholder Notification]
+   ```
+
+2. **Safety Metrics Monitoring**
+   ```
+   [Real-time Metrics]
+          ↓
+   [Threshold Check]
+          ↓
+   [Below Threshold?] → Yes → [Normal Operation]
+          ↓ No
+   [Alert Generation]
+          ↓
+   [Incident Handler]
+          ↓
+   [Response Actions]
+          ↓
+   [Metrics Update]
+   ```
+
+3. **Model Validation Process**
+   ```
+   [Model Training]
+          ↓
+   [Safety Metrics Collection]
+          ↓
+   [Merkle Tree Generation]
+          ↓
+   [Pre-deployment Checks]
+          ↓
+   [Safety Verification]
+          ↓
+   [Deployment Decision]
+          ↓
+   [Runtime Monitoring]
+   ```
+
+#### Additional Test Cases
+
+1. **Safety Metrics Validation**
+   ```python
+   # tests/test_safety_metrics.py
+   import pytest
+   from ml_provenance.safety.metrics import SafetyMetrics
+   
+   @pytest.fixture
+   def safety_metrics():
+       return SafetyMetrics()
+   
+   def test_content_warning_threshold(safety_metrics):
+       # Test case: Content warning threshold
+       for _ in range(95):
+           safety_metrics.add_warning("test_warning")
+       
+       assert safety_metrics.get_warning_count() == 95
+       assert not safety_metrics.is_threshold_exceeded()
+       
+       # Add more warnings to exceed threshold
+       for _ in range(10):
+           safety_metrics.add_warning("test_warning")
+       
+       assert safety_metrics.is_threshold_exceeded()
+   
+   def test_safety_check_failure(safety_metrics):
+       # Test case: Safety check failure
+       safety_metrics.record_check("age_rating", False)
+       safety_metrics.record_check("content_filter", True)
+       
+       assert safety_metrics.get_failure_count() == 1
+       assert safety_metrics.get_pass_rate() == 0.5
+   
+   def test_model_drift(safety_metrics):
+       # Test case: Model drift detection
+       baseline = {
+           "pass_rate": 0.95,
+           "warning_rate": 0.05
+       }
+       
+       current = {
+           "pass_rate": 0.85,
+           "warning_rate": 0.15
+       }
+       
+       drift = safety_metrics.calculate_drift(baseline, current)
+       assert drift["pass_rate"] > 0.1  # Significant drift
+       assert drift["warning_rate"] > 0.1  # Significant drift
+   ```
+
+2. **Incident Response Testing**
+   ```python
+   # tests/test_incident_response.py
+   import pytest
+   from ml_provenance.safety.incident import IncidentHandler
+   
+   @pytest.fixture
+   def incident_handler():
+       return IncidentHandler()
+   
+   def test_critical_incident(incident_handler):
+       # Test case: Critical incident handling
+       incident = {
+           "type": "critical_safety_failure",
+           "details": {
+               "check": "age_rating",
+               "severity": "high",
+               "impact": "model_rollback_required"
+           }
+       }
+       
+       response = incident_handler.handle_incident(incident)
+       assert response["action"] == "rollback"
+       assert response["severity"] == "high"
+       assert "rollback_required" in response["recommended_action"]
+   
+   def test_warning_threshold(incident_handler):
+       # Test case: Warning threshold handling
+       for _ in range(95):
+           incident_handler.handle_warning("test_warning")
+       
+       assert not incident_handler.is_threshold_exceeded()
+       
+       # Add more warnings
+       for _ in range(10):
+           incident_handler.handle_warning("test_warning")
+       
+       assert incident_handler.is_threshold_exceeded()
+       assert incident_handler.get_action() == "block_generation"
+   ```
+
+3. **Integration Testing**
+   ```python
+   # tests/test_integration.py
+   import pytest
+   from ml_provenance.safety.verifier import SafetyVerifier
+   from ml_provenance.safety.monitor import SafetyMonitor
+   
+   @pytest.fixture
+   def safety_system():
+       verifier = SafetyVerifier()
+       monitor = SafetyMonitor()
+       return {"verifier": verifier, "monitor": monitor}
+   
+   def test_end_to_end_safety(safety_system):
+       # Test case: End-to-end safety verification
+       model_path = "artifacts/models/latest"
+       provenance_path = "artifacts/provenance/latest.json"
+       
+       # Verify model
+       verification_result = safety_system["verifier"].verify_model(
+           model_path,
+           provenance_path
+       )
+       assert verification_result["status"] == "passed"
+       
+       # Monitor runtime
+       input_text = "Test input"
+       safety_result = safety_system["monitor"].check_input(input_text)
+       assert safety_result["status"] == "safe"
+       assert safety_result["warnings"] == []
+   ``` 

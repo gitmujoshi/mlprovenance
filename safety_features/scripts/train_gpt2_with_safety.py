@@ -313,7 +313,17 @@ class MerkleTree:
         if not data:
             return None
         if isinstance(data, dict):
-            leaves = [self._build_tree(v, k) for k, v in sorted(data.items())]
+            # Special handling for safety_metrics to ensure all metrics are included
+            if name == 'safety_metrics':
+                metrics = {
+                    'content_warnings': data.get('content_warnings', 0),
+                    'failed_checks': data.get('total_checks', 0) - data.get('passed_checks', 0),
+                    'passed_checks': data.get('passed_checks', 0),
+                    'total_checks': data.get('total_checks', 0)
+                }
+                leaves = [self._build_tree(v, k) for k, v in sorted(metrics.items())]
+            else:
+                leaves = [self._build_tree(v, k) for k, v in sorted(data.items())]
         elif isinstance(data, (list, tuple)):
             leaves = [self._build_tree(item, f"{name}[{i}]" if name else str(i)) for i, item in enumerate(data)]
         else:
