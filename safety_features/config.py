@@ -1,22 +1,24 @@
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List
+from enum import Enum
+
+class AgeRating(Enum):
+    CHILD = "CHILD"
+    TEEN = "TEEN"
+    ADULT = "ADULT"
 
 @dataclass
 class SafetyConfig:
-    min_age_rating: str
+    min_age_rating: AgeRating
     content_filters: List[str]
     max_input_length: int
     max_output_length: int
-    block_sensitive_topics: bool
-    require_content_warning: bool
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert config to dictionary format."""
+    block_sensitive_topics: bool = True
+    require_content_warning: bool = True
+
+    def to_dict(self) -> dict:
         return {
-            "min_age_rating": {
-                "name": self.min_age_rating,
-                "value": self.min_age_rating
-            },
+            "min_age_rating": self.min_age_rating.value,
             "content_filters": self.content_filters,
             "max_input_length": self.max_input_length,
             "max_output_length": self.max_output_length,

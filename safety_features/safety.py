@@ -9,70 +9,55 @@ class SafetyResult:
     warnings: List[str]
     violations: List[str]
     content_warning: bool
-    sensitive_topics: bool
+    sensitive_topics: List[str]
     inappropriate_content: bool
 
 class SafetyChecker:
     def __init__(self, config: SafetyConfig):
         self.config = config
-        self.bad_words = set([
-            "damn", "hell", "crap", "stupid", "idiot",  # Add more as needed
-        ])
-        self.sensitive_topics = set([
-            "politics", "religion", "sex", "drugs", "violence",  # Add more as needed
-        ])
+        self.bad_words = {"bad", "inappropriate", "explicit"}
+        self.sensitive_topics = {"violence", "drugs", "politics"}
         self.inappropriate_patterns = [
-            r"inappropriate",
-            r"offensive",
-            r"explicit",
-            # Add more patterns as needed
+            r"explicit content",
+            r"inappropriate material",
+            r"sensitive topic"
         ]
-    
+
     def check_text(self, text: str) -> Dict[str, Any]:
-        """Check text against safety criteria and return results."""
         warnings = []
         violations = []
         
         # Check text length
         if len(text) > self.config.max_input_length:
-            warnings.append(f"Text exceeds maximum input length of {self.config.max_input_length}")
-            violations.append("length_violation")
+            warnings.append(f"Text exceeds maximum length of {self.config.max_input_length} characters")
         
         # Check for bad words
-        found_bad_words = [word for word in self.bad_words if word.lower() in text.lower()]
-        if found_bad_words:
-            warnings.append(f"Found inappropriate words: {', '.join(found_bad_words)}")
-            violations.append("bad_words")
+        for word in self.bad_words:
+            if word in text.lower():
+                violations.append(f"Contains inappropriate word: {word}")
         
         # Check for sensitive topics
-        found_sensitive_topics = [topic for topic in self.sensitive_topics if topic.lower() in text.lower()]
-        if found_sensitive_topics:
-            warnings.append(f"Found sensitive topics: {', '.join(found_sensitive_topics)}")
-            violations.append("sensitive_topics")
+        if self.config.block_sensitive_topics:
+            for topic in self.sensitive_topics:
+                if topic in text.lower():
+                    violations.append(f"Contains sensitive topic: {topic}")
         
         # Check for inappropriate patterns
         for pattern in self.inappropriate_patterns:
             if re.search(pattern, text.lower()):
-                warnings.append(f"Found inappropriate content matching pattern: {pattern}")
-                violations.append("inappropriate_content")
+                violations.append(f"Matches inappropriate pattern: {pattern}")
         
         # Determine if content warning is needed
-        content_warning = bool(warnings) and self.config.require_content_warning
+        content_warning = bool(violations) and self.config.require_content_warning
         
-        # Determine if sensitive topics are present
-        sensitive_topics = "sensitive_topics" in violations
-        
-        # Determine if inappropriate content is present
-        inappropriate_content = any(v in violations for v in ["bad_words", "inappropriate_content"])
-        
-        # Determine if all checks pass
-        passes_checks = not violations
+        # Get list of sensitive topics found
+        found_topics = [topic for topic in self.sensitive_topics if topic in text.lower()]
         
         return {
-            "passes_checks": passes_checks,
+            "passes_checks": not violations,
             "warnings": warnings,
             "violations": violations,
             "content_warning": content_warning,
-            "sensitive_topics": sensitive_topics,
-            "inappropriate_content": inappropriate_content
+            "sensitive_topics": found_topics,
+            "inappropriate_content": bool(violations)
         } 
