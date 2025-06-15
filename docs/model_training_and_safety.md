@@ -98,6 +98,8 @@ The provenance tracking system captures:
 
 The project implements a Merkle tree-based validation system to ensure model integrity and provenance. This allows users to verify that the model they're using is exactly the same as the one that was trained and hasn't been tampered with.
 
+[Source: `src/ml_provenance/provenance/merkle_tree.py`]
+
 #### How to Validate the Model
 
 1. **Get the Model Hash**
@@ -150,6 +152,8 @@ The Merkle tree is constructed as follows:
     [Weights] [Metrics] [Data] [Safety] [System]
 ```
 
+[Source: `src/ml_provenance/provenance/merkle_tree.py` - `MLProvenanceMerkleTree` class]
+
 1. **Leaf Nodes**
    - Model weights hash
    - Training configuration hash
@@ -185,6 +189,8 @@ The Merkle tree is constructed as follows:
            for error in result.errors:
                print(f"- {error}")
    ```
+
+[Source: `src/ml_provenance/provenance/verifier.py` - `ProvenanceVerifier` class]
 
 2. **Incremental Update Validation**
    ```python
@@ -251,67 +257,13 @@ The Merkle tree is constructed as follows:
    try:
        validator.validate_model(model_path, provenance_path)
    except CorruptedDataError as e:
-       print(f"Data corruption detected in: {e.component}")
-       print(f"Corruption type: {e.corruption_type}")
-       # Attempt data recovery or re-download
+       print(f"Data corruption detected: {e}")
+       print(f"Component: {e.component}")
+       print(f"Error details: {e.details}")
+       # Attempt data recovery or notify administrators
    ```
 
-2. **Recovery Procedures**
-
-   a. **Automatic Recovery**
-   ```python
-   def attempt_recovery(model_path, error):
-       recovery = ModelRecovery()
-       
-       if isinstance(error, HashMismatchError):
-           # Attempt to repair corrupted files
-           recovery.repair_corrupted_files(model_path)
-       elif isinstance(error, MissingComponentError):
-           # Download missing components
-           recovery.download_missing_components(error.component)
-       elif isinstance(error, CorruptedDataError):
-           # Attempt data recovery
-           recovery.recover_corrupted_data(error.component)
-   ```
-
-   b. **Manual Recovery**
-   ```python
-   def manual_recovery_guide(error):
-       print("Manual Recovery Required")
-       print("1. Stop all model operations")
-       print("2. Backup current model state")
-       print("3. Follow these steps:")
-       
-       if isinstance(error, HashMismatchError):
-           print("   a. Download original model from trusted source")
-           print("   b. Verify download integrity")
-           print("   c. Replace corrupted files")
-       elif isinstance(error, MissingComponentError):
-           print("   a. Identify missing components")
-           print("   b. Obtain components from backup")
-           print("   c. Verify component integrity")
-   ```
-
-3. **Validation Logging**
-
-   ```python
-   class ValidationLogger:
-       def __init__(self):
-           self.logger = logging.getLogger('model_validation')
-           
-       def log_validation_attempt(self, model_path, result):
-           self.logger.info(f"Validation attempt for {model_path}")
-           self.logger.info(f"Result: {'Success' if result.is_valid else 'Failure'}")
-           
-           if not result.is_valid:
-               self.logger.error("Validation errors:")
-               for error in result.errors:
-                   self.logger.error(f"- {error}")
-                   
-       def log_recovery_attempt(self, error, success):
-           self.logger.info(f"Recovery attempt for {error.__class__.__name__}")
-           self.logger.info(f"Recovery {'successful' if success else 'failed'}")
-   ```
+[Source: `src/ml_provenance/provenance/verifier.py` - Error handling in `ProvenanceVerifier` class]
 
 #### Security Considerations
 
@@ -330,9 +282,13 @@ The Merkle tree is constructed as follows:
    - Implement rate limiting
    - Log all validation attempts
 
+[Source: `src/ml_provenance/provenance/hash_config.py` - Hash function configuration]
+
 #### Safety Verification with Merkle Trees
 
 The Merkle tree includes a dedicated `safety_metrics` section that allows users to verify that the model meets all safety requirements. This is crucial for ensuring that deployed applications maintain the safety standards established during training.
+
+[Source: `safety_features/scripts/train_gpt2_with_safety.py` - `MerkleTree` class]
 
 1. **Safety Metrics Structure**
    ```json
@@ -346,166 +302,21 @@ The Merkle tree includes a dedicated `safety_metrics` section that allows users 
    }
    ```
 
-2. **Verifying Safety Requirements**
+2. **Safety Verification Process**
    ```python
-   from ml_provenance.provenance.tracker import Tracker
-   from ml_provenance.safety.verifier import SafetyVerifier
-   
-   def verify_model_safety(model_path, provenance_path):
-       # Initialize components
-       tracker = Tracker()
-       verifier = SafetyVerifier()
+   def verify_safety_metrics(model_path, safety_config):
+       validator = SafetyValidator()
+       result = validator.verify_safety_metrics(model_path, safety_config)
        
-       # Load provenance data
-       provenance_data = tracker.load_provenance(provenance_path)
-       
-       # Get safety metrics from Merkle tree
-       safety_metrics = tracker.get_safety_metrics()
-       
-       # Verify safety requirements
-       safety_report = verifier.verify_safety_requirements(
-           safety_metrics,
-           min_pass_rate=0.95,  # Minimum required pass rate
-           max_content_warnings=100,  # Maximum allowed content warnings
-           required_checks=['age_rating', 'content_filter', 'sensitive_topics']
-       )
-       
-       return safety_report
+       if result.is_valid:
+           print("Safety metrics verified successfully")
+           print(f"Pass rate: {result.pass_rate}%")
+       else:
+           print("Safety verification failed")
+           print(f"Failed checks: {result.failed_checks}")
    ```
 
-3. **Safety Verification Report**
-   ```python
-   def generate_safety_report(safety_metrics):
-       report = {
-           "overall_status": "PASS" if safety_metrics["passed_checks"] / safety_metrics["total_checks"] >= 0.95 else "FAIL",
-           "metrics": {
-               "pass_rate": f"{safety_metrics['passed_checks'] / safety_metrics['total_checks']:.2%}",
-               "content_warnings": safety_metrics["content_warnings"],
-               "failed_checks": safety_metrics["failed_checks"]
-           },
-           "requirements": {
-               "min_pass_rate": "95%",
-               "max_content_warnings": "100",
-               "required_checks": ["age_rating", "content_filter", "sensitive_topics"]
-           }
-       }
-       return report
-   ```
-
-4. **Continuous Safety Monitoring**
-   ```python
-   class SafetyMonitor:
-       def __init__(self, model_path, provenance_path):
-           self.tracker = Tracker()
-           self.verifier = SafetyVerifier()
-           self.provenance_data = self.tracker.load_provenance(provenance_path)
-           
-       def monitor_safety(self, input_text):
-           # Get current safety metrics
-           current_metrics = self.tracker.get_current_safety_metrics()
-           
-           # Compare with training metrics
-           safety_status = self.verifier.compare_with_training(
-               current_metrics,
-               self.provenance_data["safety_metrics"]
-           )
-           
-           # Alert if safety standards are not met
-           if not safety_status["meets_standards"]:
-               self.alert_safety_violation(safety_status)
-           
-           return safety_status
-   ```
-
-#### Safety Requirements Verification
-
-1. **Pre-deployment Verification**
-   ```python
-   def verify_deployment_requirements(model_path, provenance_path):
-       # Load model and provenance
-       model = load_model(model_path)
-       provenance = load_provenance(provenance_path)
-       
-       # Verify safety metrics
-       safety_metrics = provenance["safety_metrics"]
-       if safety_metrics["passed_checks"] / safety_metrics["total_checks"] < 0.95:
-           raise SafetyVerificationError("Model does not meet minimum safety requirements")
-       
-       # Verify content warning rate
-       if safety_metrics["content_warnings"] > 100:
-           raise SafetyVerificationError("Content warning rate exceeds acceptable threshold")
-       
-       return True
-   ```
-
-2. **Runtime Safety Monitoring**
-   ```python
-   class RuntimeSafetyMonitor:
-       def __init__(self, model, safety_config):
-           self.model = model
-           self.safety_config = safety_config
-           self.metrics = SafetyMetrics()
-           
-       def check_input(self, input_text):
-           # Check input against safety requirements
-           safety_result = self.model.safety_checker.check_input(input_text)
-           
-           # Update metrics
-           self.metrics.update(safety_result)
-           
-           # Verify against training metrics
-           if not self.verify_against_training():
-               raise RuntimeSafetyError("Safety metrics deviate from training standards")
-           
-           return safety_result
-   ```
-
-3. **Safety Compliance Reporting**
-   ```python
-   def generate_compliance_report(model_path, provenance_path):
-       # Load model and provenance
-       model = load_model(model_path)
-       provenance = load_provenance(provenance_path)
-       
-       # Generate compliance report
-       report = {
-           "model_id": model.model_id,
-           "safety_metrics": {
-               "pass_rate": f"{provenance['safety_metrics']['passed_checks'] / provenance['safety_metrics']['total_checks']:.2%}",
-               "content_warnings": provenance["safety_metrics"]["content_warnings"],
-               "failed_checks": provenance["safety_metrics"]["failed_checks"]
-           },
-           "compliance_status": {
-               "meets_requirements": True,
-               "verified_by": "Merkle Tree Validation",
-               "verification_timestamp": datetime.now().isoformat()
-           }
-       }
-       
-       return report
-   ```
-
-#### Best Practices for Safety Verification
-
-1. **Regular Verification**
-   - Verify safety metrics before each deployment
-   - Monitor safety metrics during runtime
-   - Schedule periodic full safety audits
-
-2. **Compliance Documentation**
-   - Maintain detailed safety verification reports
-   - Document any safety incidents or violations
-   - Keep track of safety metric trends
-
-3. **Automated Monitoring**
-   - Implement continuous safety monitoring
-   - Set up alerts for safety metric deviations
-   - Automate safety verification in CI/CD pipeline
-
-4. **User Safety Guidelines**
-   - Provide clear safety requirements documentation
-   - Include safety verification instructions
-   - Document safety incident response procedures
+[Source: `safety_features/scripts/train_gpt2_with_safety.py` - Safety metrics tracking]
 
 ### 4. Safety Features
 

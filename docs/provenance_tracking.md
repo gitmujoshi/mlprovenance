@@ -4,6 +4,8 @@
 
 Provenance tracking in machine learning is the process of recording and maintaining the history of data, models, and training processes. This documentation covers various techniques used for ML provenance tracking, with a focus on cryptographic verification methods.
 
+[Source: `src/ml_provenance/provenance/tracker.py`]
+
 ## 1. Cryptographic Provenance Techniques
 
 ### 1.1 Merkle Trees in ML Provenance
@@ -13,6 +15,8 @@ A Merkle tree (also known as a hash tree) is a tree structure where each leaf no
 - **Data Versioning**: Track changes in training datasets
 - **Model Checkpointing**: Verify model state at different training stages
 - **Experiment Tracking**: Maintain a verifiable history of experiments
+
+[Source: `src/ml_provenance/provenance/merkle_tree.py` - `MLProvenanceMerkleTree` class]
 
 Example structure for ML training:
 ```
@@ -45,6 +49,8 @@ def track_data_provenance(data):
     return metadata
 ```
 
+[Source: `src/ml_provenance/provenance/tracker.py` - `DataProvenanceTracker` class]
+
 #### 1.2.2 Model Provenance
 ```python
 def track_model_provenance(model):
@@ -64,21 +70,120 @@ def track_model_provenance(model):
     }
 ```
 
+[Source: `src/ml_provenance/provenance/tracker.py` - `ModelProvenanceTracker` class]
+
 ### 1.3 Digital Signatures
 
-Digital signatures can be used to verify the authenticity of provenance records:
+The system uses digital signatures to ensure the authenticity of provenance data. Each component of the provenance tree is signed using a private key, and the signatures can be verified using the corresponding public key.
+
+[Source: `src/ml_provenance/provenance/signer.py`]
 
 ```python
-def sign_provenance_record(record, private_key):
+def sign_provenance_data(data, private_key):
     # Create signature
     signature = private_key.sign(
-        json.dumps(record, sort_keys=True).encode()
+        json.dumps(data, sort_keys=True).encode()
     )
+    
     return {
-        "record": record,
-        "signature": signature
+        "data": data,
+        "signature": signature.hex()
     }
 ```
+
+### 1.4 Verification Process
+
+The verification process ensures that all components of the ML pipeline maintain their integrity and can be traced back to their origin.
+
+[Source: `src/ml_provenance/provenance/verifier.py` - `ProvenanceVerifier` class]
+
+1. **Data Verification**
+   ```python
+   def verify_data_provenance(data_path, provenance_data):
+       verifier = ProvenanceVerifier()
+       result = verifier.verify_data(data_path, provenance_data)
+       
+       if result.is_valid:
+           print("Data provenance verified successfully")
+       else:
+           print("Data verification failed")
+           print(f"Errors: {result.errors}")
+   ```
+
+2. **Model Verification**
+   ```python
+   def verify_model_provenance(model_path, provenance_data):
+       verifier = ProvenanceVerifier()
+       result = verifier.verify_model(model_path, provenance_data)
+       
+       if result.is_valid:
+           print("Model provenance verified successfully")
+       else:
+           print("Model verification failed")
+           print(f"Errors: {result.errors}")
+   ```
+
+3. **Training Verification**
+   ```python
+   def verify_training_provenance(training_path, provenance_data):
+       verifier = ProvenanceVerifier()
+       result = verifier.verify_training(training_path, provenance_data)
+       
+       if result.is_valid:
+           print("Training provenance verified successfully")
+       else:
+           print("Training verification failed")
+           print(f"Errors: {result.errors}")
+   ```
+
+### 1.5 Provenance Report Generation
+
+The system generates comprehensive provenance reports that include all necessary information for verification and auditing.
+
+[Source: `src/ml_provenance/provenance/report_generator.py` - `ReportGenerator` class]
+
+```python
+def generate_provenance_report(model_path, data_path, training_path):
+    generator = ReportGenerator()
+    report = generator.generate_report(
+        model_path=model_path,
+        data_path=data_path,
+        training_path=training_path
+    )
+    
+    # Save report
+    with open("provenance_report.json", "w") as f:
+        json.dump(report, f, indent=2)
+    
+    return report
+```
+
+The report includes:
+- Data provenance information
+- Model architecture and weights
+- Training configuration and metrics
+- Safety metrics and checks
+- System information
+- Verification results
+
+### 1.6 Best Practices
+
+1. **Regular Verification**
+   - Verify provenance data before each deployment
+   - Schedule periodic full verification
+   - Monitor for any changes in provenance data
+
+2. **Security Measures**
+   - Use strong hash functions (SHA-256 or better)
+   - Implement digital signatures
+   - Secure storage of provenance data
+
+3. **Documentation**
+   - Maintain detailed provenance reports
+   - Document verification procedures
+   - Keep track of verification results
+
+[Source: `src/ml_provenance/provenance/config.py` - Security and verification configuration]
 
 ## 2. Provenance Tracking Components
 
