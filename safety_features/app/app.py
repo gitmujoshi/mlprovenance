@@ -111,16 +111,20 @@ def model_info():
 
     # Try to load provenance report
     try:
-        with open(model_dir / 'provenance_report.json', 'r') as f:
-            provenance = json.load(f)
+        provenance_files = list(model_dir.glob('provenance_report_*.json'))
+        if provenance_files:
+            with open(max(provenance_files, key=lambda x: x.stat().st_mtime), 'r') as f:
+                provenance = json.load(f)
+        else:
+            provenance = None
     except:
         provenance = None
 
     return jsonify({
         'model_path': str(latest_model),
         'last_modified': datetime.fromtimestamp(latest_model.stat().st_mtime).isoformat(),
-        'provenance': provenance
+        'provenance': provenance or {}
     })
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True, port=5001) 
