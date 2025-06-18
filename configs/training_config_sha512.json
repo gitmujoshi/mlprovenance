@@ -1,0 +1,25 @@
+{
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased",
+        "custom_config": {}
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4,
+        "optimizer": "adam",
+        "scheduler": "cosine"
+    },
+    "safety": {
+        "enabled": true,
+        "config_path": "safety_features/app/config.py"
+    },
+    "hash_algorithm": "sha512",
+    "provenance": {
+        "enabled": true,
+        "track_data": true,
+        "track_model": true,
+        "track_training": true
+    }
+} 

@@ -223,16 +223,63 @@ The Merkle Tree Engine provides cryptographic verification of data integrity and
 A Merkle tree is a hierarchical data structure that allows efficient verification of data integrity. Each leaf node contains a hash of a data block, and each non-leaf node contains a hash of its children. This structure enables efficient proof generation and verification.
 
 **Key Features:**
-- **Cryptographic Integrity**: Uses SHA-256 hashing for tamper detection
+- **Cryptographic Integrity**: Uses configurable hash functions for tamper detection
 - **Efficient Verification**: O(log n) complexity for proof verification
 - **Batch Processing**: Can handle large numbers of data blocks efficiently
 - **Proof Generation**: Generates compact proofs for individual data items
+- **Configurable Hashing**: Supports multiple hash algorithms (SHA-256, BLAKE3, SHA-512, etc.)
+
+#### Configurable Hash Algorithm Support
+
+The system supports multiple hash algorithms to meet different requirements for security, performance, and compatibility:
+
+**Supported Algorithms:**
+- **SHA-256**: Industry standard, balanced security and performance
+- **BLAKE3**: High-performance, parallelizable, secure
+- **SHA-512**: Maximum security, quantum-resistant
+- **SHA-1**: Legacy support (not recommended for security)
+- **MD5**: Legacy support (not recommended for security)
+
+**Algorithm Selection:**
+```python
+class HashConfig:
+    def __init__(self, hash_algorithm: str = "sha256"):
+        self.hash_algorithm = hash_algorithm.lower()
+        self._validate_algorithm()
+        
+    def get_hash_function(self) -> Callable[[bytes], str]:
+        if self.hash_algorithm == "sha256":
+            return lambda data: hashlib.sha256(data).hexdigest()
+        elif self.hash_algorithm == "blake3":
+            return lambda data: blake3.blake3(data).hexdigest()
+        elif self.hash_algorithm == "sha512":
+            return lambda data: hashlib.sha512(data).hexdigest()
+        # ... other algorithms
+```
+
+**Training Configuration Integration:**
+```python
+class TrainingHashConfig:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.hash_algorithm = self._get_hash_algorithm_from_config()
+        self.hash_config = HashConfig(self.hash_algorithm)
+        
+    def _get_hash_algorithm_from_config(self) -> str:
+        return (
+            self.config.get("hash_algorithm") or
+            self.config.get("provenance", {}).get("hash_algorithm") or
+            "sha256"  # default
+        )
+```
 
 ```python
 class MerkleTree:
     def __init__(self, data: List[bytes]):
         self.data = data
-        self.leaves = [hashlib.sha256(item).digest() for item in data]
+        # Use configurable hash function
+        hash_func = HashFactory.get_hash_function()
+        self.leaves = [hash_func(item).encode() for item in data]
         self.tree = self._build_tree(self.leaves)
         self.root = self.tree[-1][0] if self.tree else None
         
@@ -253,7 +300,9 @@ class MerkleTree:
                     combined = current_level[i] + current_level[i + 1]
                 else:
                     combined = current_level[i] + current_level[i]
-                next_level.append(hashlib.sha256(combined).digest())
+                # Use configurable hash function
+                hash_func = HashFactory.get_hash_function()
+                next_level.append(hash_func(combined).encode())
             tree.append(next_level)
             current_level = next_level
             
@@ -281,7 +330,9 @@ class MerkleTree:
         
     def verify_proof(self, data: bytes, proof: List[bytes], index: int) -> bool:
         """Verify Merkle proof for given data"""
-        current_hash = hashlib.sha256(data).digest()
+        # Use configurable hash function
+        hash_func = HashFactory.get_hash_function()
+        current_hash = hash_func(data).encode()
         current_index = index
         
         for sibling_hash in proof:
@@ -289,17 +340,19 @@ class MerkleTree:
                 combined = current_hash + sibling_hash
             else:
                 combined = sibling_hash + current_hash
-            current_hash = hashlib.sha256(combined).digest()
+            current_hash = hash_func(combined).encode()
             current_index //= 2
             
         return current_hash == self.root
 ```
 
 **Code Explanation:**
-- **`__init__`**: Initializes the tree by computing hashes of all input data and building the tree structure
-- **`_build_tree`**: Recursively builds the tree by combining pairs of nodes and computing their combined hash
+- **`__init__`**: Initializes the tree by computing hashes of all input data using the configured hash function
+- **`_build_tree`**: Recursively builds the tree by combining pairs of nodes and computing their combined hash using the configured algorithm
 - **`get_proof`**: Generates a proof path from a leaf to the root, collecting sibling hashes along the way
 - **`verify_proof`**: Reconstructs the path to the root using the provided proof and verifies it matches the stored root hash
+- **`HashFactory.get_hash_function()`**: Retrieves the currently configured hash function from the factory
+- **Configurable Hashing**: All hash operations use the algorithm specified in the training configuration
 
 #### Provenance Merkle Tree
 

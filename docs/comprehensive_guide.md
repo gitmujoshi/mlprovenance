@@ -78,81 +78,131 @@ class SafetyFramework:
 
 ## Provenance and Merkle Tree Proofs
 
-### Merkle Tree Fundamentals
+### 2.1 Merkle Tree Fundamentals
 
-Merkle trees provide cryptographic proof of data integrity and enable efficient verification of large datasets:
+A Merkle tree is a hierarchical data structure that enables efficient verification of data integrity. Each leaf node contains a hash of a data block, and each non-leaf node contains a hash of its children. This structure allows for efficient proof generation and verification.
 
+**Key Properties:**
+- **Cryptographic Integrity**: Uses cryptographic hash functions for tamper detection
+- **Efficient Verification**: O(log n) complexity for proof verification
+- **Batch Processing**: Can handle large numbers of data blocks efficiently
+- **Proof Generation**: Generates compact proofs for individual data items
+
+### 2.2 Configurable Hash Algorithms
+
+The system supports multiple hash algorithms for provenance tracking, allowing users to choose based on their specific requirements for security, performance, and compatibility.
+
+#### 2.2.1 Supported Hash Algorithms
+
+**SHA-256 (Default)**
+- **Security Level**: High
+- **Performance**: Medium
+- **Digest Size**: 32 bytes
+- **Use Cases**: General purpose, widely trusted, standard compliance
+- **Advantages**: Industry standard, well-tested, widely supported
+- **Disadvantages**: Slower than modern alternatives
+
+**BLAKE3**
+- **Security Level**: High
+- **Performance**: Very Fast
+- **Digest Size**: 32 bytes
+- **Use Cases**: High-performance applications, real-time systems
+- **Advantages**: Extremely fast, parallelizable, secure
+- **Disadvantages**: Newer algorithm, less widely supported
+
+**SHA-512**
+- **Security Level**: Very High
+- **Performance**: Slow
+- **Digest Size**: 64 bytes
+- **Use Cases**: Maximum security requirements, quantum-resistant
+- **Advantages**: Highest security, future-proof
+- **Disadvantages**: Slower performance, larger digest size
+
+**SHA-1 (Legacy)**
+- **Security Level**: Broken
+- **Performance**: Fast
+- **Digest Size**: 20 bytes
+- **Use Cases**: Legacy compatibility only
+- **Advantages**: Fast, widely supported
+- **Disadvantages**: Cryptographically broken, not secure
+
+**MD5 (Legacy)**
+- **Security Level**: Broken
+- **Performance**: Very Fast
+- **Digest Size**: 16 bytes
+- **Use Cases**: Legacy compatibility only
+- **Advantages**: Very fast, widely supported
+- **Disadvantages**: Cryptographically broken, not secure
+
+#### 2.2.2 Hash Algorithm Selection Guidelines
+
+**For Production Systems:**
+- **SHA-256**: Balanced security and performance
+- **BLAKE3**: High-performance requirements
+- **SHA-512**: Maximum security requirements
+
+**For Development/Testing:**
+- **SHA-256**: Standard choice
+- **BLAKE3**: Performance testing
+
+**For Legacy Systems:**
+- **SHA-1/MD5**: Only for compatibility with existing systems
+
+**For Compliance Requirements:**
+- **SHA-256/SHA-512**: Meet most regulatory requirements
+- **BLAKE3**: May require validation for specific compliance frameworks
+
+#### 2.2.3 Configuration Examples
+
+**High-Performance Configuration:**
 ```python
-import hashlib
-from typing import List, Optional
-
-class MerkleTree:
-    def __init__(self, data: List[bytes]):
-        self.data = data
-        self.leaves = [hashlib.sha256(item).digest() for item in data]
-        self.tree = self._build_tree(self.leaves)
-        self.root = self.tree[-1][0] if self.tree else None
-        
-    def _build_tree(self, leaves: List[bytes]) -> List[List[bytes]]:
-        """Build Merkle tree from leaf nodes"""
-        if len(leaves) == 0:
-            return []
-        if len(leaves) == 1:
-            return [leaves]
-            
-        tree = [leaves]
-        current_level = leaves
-        
-        while len(current_level) > 1:
-            next_level = []
-            for i in range(0, len(current_level), 2):
-                if i + 1 < len(current_level):
-                    combined = current_level[i] + current_level[i + 1]
-                else:
-                    combined = current_level[i] + current_level[i]
-                next_level.append(hashlib.sha256(combined).digest())
-            tree.append(next_level)
-            current_level = next_level
-            
-        return tree
-        
-    def get_proof(self, index: int) -> List[bytes]:
-        """Generate Merkle proof for data at given index"""
-        if index >= len(self.leaves):
-            raise ValueError("Index out of range")
-            
-        proof = []
-        current_index = index
-        
-        for level in self.tree[:-1]:
-            if current_index % 2 == 0:
-                if current_index + 1 < len(level):
-                    proof.append(level[current_index + 1])
-                else:
-                    proof.append(level[current_index])
-            else:
-                proof.append(level[current_index - 1])
-            current_index //= 2
-            
-        return proof
-        
-    def verify_proof(self, data: bytes, proof: List[bytes], index: int) -> bool:
-        """Verify Merkle proof for given data"""
-        current_hash = hashlib.sha256(data).digest()
-        current_index = index
-        
-        for sibling_hash in proof:
-            if current_index % 2 == 0:
-                combined = current_hash + sibling_hash
-            else:
-                combined = sibling_hash + current_hash
-            current_hash = hashlib.sha256(combined).digest()
-            current_index //= 2
-            
-        return current_hash == self.root
+config = {
+    "hash_algorithm": "blake3",
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased"
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4
+    }
+}
 ```
 
-### Provenance Merkle Tree Implementation
+**Maximum Security Configuration:**
+```python
+config = {
+    "hash_algorithm": "sha512",
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased"
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4
+    }
+}
+```
+
+**Standard Configuration:**
+```python
+config = {
+    "hash_algorithm": "sha256",  # Default
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased"
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4
+    }
+}
+```
+
+### 2.3 Provenance Merkle Tree Implementation
 
 ```python
 class ProvenanceMerkleTree:

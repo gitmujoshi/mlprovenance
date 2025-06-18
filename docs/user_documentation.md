@@ -118,6 +118,13 @@ This document provides instructions for using the ML provenance tracking and saf
        "safety": {
            "enabled": True,
            "config_path": "safety_features/app/config.py"
+       },
+       "hash_algorithm": "sha256",  # Can be: sha256, blake3, sha512, sha1, md5
+       "provenance": {
+           "enabled": True,
+           "track_data": True,
+           "track_model": True,
+           "track_training": True
        }
    }
    ```
@@ -130,9 +137,151 @@ This document provides instructions for using the ML provenance tracking and saf
        --safety_config safety_features/app/config.py
    ```
 
-### 3.2 Framework-Specific Training
+### 3.2 Hash Algorithm Configuration
 
-#### 3.2.1 PyTorch Training
+The system supports multiple hash algorithms for provenance tracking. You can configure the hash algorithm in your training configuration:
+
+#### 3.2.1 Supported Hash Algorithms
+
+1. **SHA-256** (Default)
+   - **Security**: High
+   - **Speed**: Medium
+   - **Digest Size**: 32 bytes
+   - **Use Case**: General purpose, widely trusted
+   ```json
+   {
+       "hash_algorithm": "sha256"
+   }
+   ```
+
+2. **BLAKE3**
+   - **Security**: High
+   - **Speed**: Very Fast
+   - **Digest Size**: 32 bytes
+   - **Use Case**: High-performance applications
+   ```json
+   {
+       "hash_algorithm": "blake3"
+   }
+   ```
+
+3. **SHA-512**
+   - **Security**: Very High
+   - **Speed**: Slow
+   - **Digest Size**: 64 bytes
+   - **Use Case**: Maximum security requirements
+   ```json
+   {
+       "hash_algorithm": "sha512"
+   }
+   ```
+
+4. **SHA-1** (Legacy)
+   - **Security**: Broken (not recommended)
+   - **Speed**: Fast
+   - **Digest Size**: 20 bytes
+   - **Use Case**: Legacy compatibility only
+   ```json
+   {
+       "hash_algorithm": "sha1"
+   }
+   ```
+
+5. **MD5** (Legacy)
+   - **Security**: Broken (not recommended)
+   - **Speed**: Very Fast
+   - **Digest Size**: 16 bytes
+   - **Use Case**: Legacy compatibility only
+   ```json
+   {
+       "hash_algorithm": "md5"
+   }
+   ```
+
+#### 3.2.2 Configuration Examples
+
+**High-Performance Training (BLAKE3):**
+```json
+{
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased"
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4
+    },
+    "hash_algorithm": "blake3",
+    "safety": {
+        "enabled": true
+    }
+}
+```
+
+**Maximum Security Training (SHA-512):**
+```json
+{
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased"
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4
+    },
+    "hash_algorithm": "sha512",
+    "safety": {
+        "enabled": true
+    }
+}
+```
+
+**Standard Training (SHA-256):**
+```json
+{
+    "model": {
+        "type": "transformer",
+        "architecture": "bert-base-uncased"
+    },
+    "training": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 1e-4
+    },
+    "hash_algorithm": "sha256",
+    "safety": {
+        "enabled": true
+    }
+}
+```
+
+#### 3.2.3 Hash Algorithm Selection Guidelines
+
+**Choose SHA-256 when:**
+- You need a balance of security and performance
+- Working with standard ML workloads
+- Compatibility with existing systems is important
+
+**Choose BLAKE3 when:**
+- Performance is critical (large datasets, frequent hashing)
+- You want maximum speed without compromising security
+- Working with real-time applications
+
+**Choose SHA-512 when:**
+- Maximum security is required
+- Working with sensitive data or compliance requirements
+- Future-proofing against quantum attacks
+
+**Avoid SHA-1 and MD5 when:**
+- Security is important (they are cryptographically broken)
+- Working with production systems
+- Compliance requirements mandate secure hashing
+
+### 3.3 Framework-Specific Training
+
+#### 3.3.1 PyTorch Training
 
 1. Create a PyTorch model with safety features:
    ```python
@@ -189,7 +338,7 @@ This document provides instructions for using the ML provenance tracking and saf
        --framework pytorch
    ```
 
-#### 3.2.2 TensorFlow Training
+#### 3.3.2 TensorFlow Training
 
 1. Create a TensorFlow model with safety features:
    ```python
@@ -245,7 +394,7 @@ This document provides instructions for using the ML provenance tracking and saf
        --framework tensorflow
    ```
 
-#### 3.2.3 JAX Training
+#### 3.3.3 JAX Training
 
 1. Create a JAX model with safety features:
    ```python
@@ -300,98 +449,6 @@ This document provides instructions for using the ML provenance tracking and saf
        --model_name SafeJAXModel \
        --config_path jax_config.py \
        --framework jax
-   ```
-
-### 3.3 Model-Specific Training
-
-#### 3.3.1 Transformer Models (BERT, GPT, etc.)
-
-1. Configure transformer training:
-   ```python
-   transformer_config = {
-       "model": {
-           "type": "transformer",
-           "architecture": "bert-base-uncased",
-           "safety_features": {
-               "attention_patterns": True,
-               "token_distributions": True,
-               "bias_metrics": True
-           }
-       },
-       "training": {
-           "epochs": 3,
-           "batch_size": 32,
-           "learning_rate": 1e-4
-       }
-   }
-   ```
-
-2. Run transformer training:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name SafeTransformerModel \
-       --config_path transformer_config.py \
-       --model_type transformer
-   ```
-
-#### 3.3.2 CNN Models
-
-1. Configure CNN training:
-   ```python
-   cnn_config = {
-       "model": {
-           "type": "cnn",
-           "architecture": "resnet50",
-           "safety_features": {
-               "feature_maps": True,
-               "activation_patterns": True,
-               "gradient_flow": True
-           }
-       },
-       "training": {
-           "epochs": 10,
-           "batch_size": 64,
-           "learning_rate": 1e-3
-       }
-   }
-   ```
-
-2. Run CNN training:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name SafeCNNModel \
-       --config_path cnn_config.py \
-       --model_type cnn
-   ```
-
-#### 3.3.3 RNN/LSTM Models
-
-1. Configure RNN training:
-   ```python
-   rnn_config = {
-       "model": {
-           "type": "rnn",
-           "architecture": "lstm",
-           "safety_features": {
-               "hidden_states": True,
-               "sequence_patterns": True,
-               "memory_usage": True
-           }
-       },
-       "training": {
-           "epochs": 5,
-           "batch_size": 32,
-           "learning_rate": 1e-3
-       }
-   }
-   ```
-
-2. Run RNN training:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name SafeRNNModel \
-       --config_path rnn_config.py \
-       --model_type rnn
    ```
 
 ### 3.4 Monitoring Training Progress

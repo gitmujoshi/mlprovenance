@@ -227,10 +227,27 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
     
-    # Configure hash function
-    from ml_provenance.provenance.hash_config import HashFactory
-    HashFactory.initialize(hash_algorithm="blake3")  # You can change this to "sha256" or "sha512"
-    logger.info(f"Using hash algorithm: {HashFactory.get_current_algorithm()}")
+    # Training configuration
+    config = {
+        "epochs": 5,
+        "batch_size": 64,
+        "learning_rate": 0.001,
+        "hash_algorithm": "sha256",  # Can be: sha256, blake3, sha512, sha1, md5
+        "privacy_parameters": {
+            "target_epsilon": 1.0,
+            "target_delta": 1e-5,
+            "max_grad_norm": 1.0,
+            "noise_multiplier": 1.0
+        }
+    }
+    
+    # Configure hash function from training config
+    from ml_provenance.provenance.hash_config import TrainingHashConfig
+    hash_config = TrainingHashConfig(config)
+    hash_config.initialize_hash_factory()
+    
+    logger.info(f"Using hash algorithm: {hash_config.get_current_algorithm()}")
+    logger.info(f"Algorithm info: {hash_config.get_algorithm_info()}")
     
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -265,19 +282,6 @@ def main():
     
     # Track model provenance
     provenance.track_model(model)
-    
-    # Training configuration
-    config = {
-        "epochs": 5,
-        "batch_size": 64,
-        "learning_rate": 0.001,
-        "privacy_parameters": {
-            "target_epsilon": 1.0,
-            "target_delta": 1e-5,
-            "max_grad_norm": 1.0,
-            "noise_multiplier": 1.0
-        }
-    }
     
     # Initialize optimizer
     optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])

@@ -34,7 +34,9 @@ class MerkleNode:
                 return str(data)
         
         serialized_data = _serialize_data(self.data)
-        return hashlib.sha256(json.dumps(serialized_data, sort_keys=True).encode()).hexdigest()
+        # Get hash function from factory
+        hash_func = HashFactory.get_hash_function()
+        return hash_func(json.dumps(serialized_data, sort_keys=True).encode())
     
     def _encode_data(self, data: Any) -> Any:
         """Encode data for hashing."""
@@ -84,7 +86,9 @@ class MerkleTree:
     
     def _combine_hashes(self, left_hash: str, right_hash: str) -> str:
         """Combine two hashes to create a parent hash."""
-        return hashlib.sha256((left_hash + right_hash).encode()).hexdigest()
+        # Get hash function from factory
+        hash_func = HashFactory.get_hash_function()
+        return hash_func((left_hash + right_hash).encode())
     
     def get_root_hash(self) -> Optional[str]:
         """Get the root hash of the tree."""
