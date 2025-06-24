@@ -13,9 +13,12 @@ import json
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from safety_features.frameworks.pytorch import PyTorchSafetyWrapper
-from safety_features.frameworks.tensorflow import TensorFlowSafetyWrapper
-from safety_features.frameworks.jax import JAXSafetyWrapper
+from src.ml_provenance.frameworks.pytorch.wrapper import PyTorchSafetyWrapper
+from src.ml_provenance.frameworks.pytorch.trainer import PyTorchSafetyTrainer
+from src.ml_provenance.frameworks.tensorflow.wrapper import TensorFlowSafetyWrapper
+from src.ml_provenance.frameworks.tensorflow.trainer import TensorFlowSafetyTrainer
+from src.ml_provenance.frameworks.jax.wrapper import JAXSafetyWrapper
+from src.ml_provenance.frameworks.jax.trainer import JAXSafetyTrainer
 from ml_provenance.provenance.hash_config import TrainingHashConfig
 
 def load_config(config_path: str) -> dict:
@@ -45,13 +48,10 @@ def train_with_safety(model_name: str, config_path: str, framework: str = "pytor
     
     # Framework-specific training
     if framework == "pytorch":
-        from safety_features.frameworks.pytorch import PyTorchSafetyTrainer
         trainer = PyTorchSafetyTrainer(model_name, config)
     elif framework == "tensorflow":
-        from safety_features.frameworks.tensorflow import TensorFlowSafetyTrainer
         trainer = TensorFlowSafetyTrainer(model_name, config)
     elif framework == "jax":
-        from safety_features.frameworks.jax import JAXSafetyTrainer
         trainer = JAXSafetyTrainer(model_name, config)
     else:
         raise ValueError(f"Unsupported framework: {framework}")

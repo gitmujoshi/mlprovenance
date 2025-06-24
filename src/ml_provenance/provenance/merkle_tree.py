@@ -1,3 +1,42 @@
+"""
+Merkle Tree Implementation for ML Provenance Verification
+
+This module implements a Merkle tree data structure specifically designed for
+machine learning provenance verification. It provides cryptographic proof of
+data integrity and enables efficient verification of large datasets.
+
+Architecture:
+├── MLProvenanceMerkleTree: Main Merkle tree implementation
+├── Hash Generation: Configurable hash algorithms
+├── Tree Construction: Bottom-up tree building
+├── Proof Generation: Cryptographic proof creation
+└── Verification: Integrity checking and validation
+
+Key Features:
+- Configurable hash algorithms (BLAKE3, SHA256, SHA512)
+- Efficient tree construction for large datasets
+- Cryptographic proof generation
+- Fast verification algorithms
+- JSON serialization for persistence
+- Cross-platform compatibility
+
+Cryptographic Properties:
+- Collision resistance through cryptographic hashing
+- Tamper detection through hash chaining
+- Efficient verification through logarithmic proofs
+- Immutable structure through hash dependencies
+
+Use Cases:
+- ML model integrity verification
+- Dataset authenticity validation
+- Training process audit trails
+- Blockchain storage verification
+- Cross-system data validation
+
+Author: ML Provenance Team
+License: MIT
+"""
+
 import hashlib
 import json
 import numpy as np
@@ -184,62 +223,477 @@ class MerkleTree:
         return json.dumps(hash_structure, indent=2)
 
 class MLProvenanceMerkleTree:
-    """Merkle tree implementation for ML provenance verification."""
+    """
+    Merkle tree implementation for ML provenance verification.
     
-    def __init__(self):
-        """Initialize an empty Merkle tree."""
-        self.root = None
-        self.nodes = {}  # Dictionary to store all nodes by their type
-        self.epoch_nodes = {}  # Store epoch-specific nodes
-        self.architecture_node = None  # Store architecture node separately
-        logger.info("Initialized MLProvenanceMerkleTree")
+    This class implements a Merkle tree data structure specifically designed
+    for machine learning provenance verification. It provides cryptographic
+    proof of data integrity and enables efficient verification of large
+    datasets and model artifacts.
     
-    def _compute_hash(self, data: Dict[str, Any]) -> str:
+    Key Features:
+        - Configurable hash algorithms (BLAKE3, SHA256, SHA512)
+        - Efficient tree construction for large datasets
+        - Cryptographic proof generation and verification
+        - JSON serialization for persistence
+        - Cross-platform compatibility
+        
+    Cryptographic Properties:
+        - Collision resistance through cryptographic hashing
+        - Tamper detection through hash chaining
+        - Efficient verification through logarithmic proofs
+        - Immutable structure through hash dependencies
+        
+    Use Cases:
+        - ML model integrity verification
+        - Dataset authenticity validation
+        - Training process audit trails
+        - Blockchain storage verification
+        - Cross-system data validation
+    """
+    
+    def __init__(self, hash_algorithm: str = 'blake3'):
         """
-        Compute hash of data using configured hash function.
+        Initialize Merkle tree with specified hash algorithm.
         
         Args:
-            data: Data to hash
+            hash_algorithm: Hash algorithm to use ('blake3', 'sha256', 'sha512')
             
-        Returns:
-            Hex digest of the hash
+        Supported Algorithms:
+            - blake3: Fast, secure hash function (recommended)
+            - sha256: Standard SHA-256 hash function
+            - sha512: SHA-512 hash function for higher security
         """
-        def _serialize_data(obj):
-            try:
-                if isinstance(obj, torch.Tensor):
-                    return obj.detach().cpu().numpy().tolist()
-                elif isinstance(obj, np.ndarray):
-                    return obj.tolist()
-                elif isinstance(obj, (np.integer, np.floating)):
-                    return float(obj)
-                elif isinstance(obj, dict):
-                    return {str(k): _serialize_data(v) for k, v in obj.items()}
-                elif isinstance(obj, (list, tuple)):
-                    return [_serialize_data(x) for x in obj]
-                elif hasattr(obj, '__dict__'):
-                    return _serialize_data(obj.__dict__)
-                elif isinstance(obj, (str, int, float, bool, type(None))):
-                    return obj
-                else:
-                    return str(obj)
-            except Exception as e:
-                logger.warning(f"Failed to serialize object of type {type(obj)}: {str(e)}")
-                return str(obj)
-
+        self.hash_factory = HashFactory()
+        self.hash_factory.set_algorithm(hash_algorithm)
+        self.hash_algorithm = hash_algorithm
+        
+        # Tree structure
+        self.leaves = []
+        self.nodes = {}
+        self.root_hash = None
+        self.tree_height = 0
+        
+        logger.info(f"Merkle tree initialized with algorithm: {hash_algorithm}")
+    
+    def build_tree(self, data: Union[Dict[str, Any], List[Any], str, bytes]) -> str:
+        """
+        Build Merkle tree from input data.
+        
+        This method constructs a complete Merkle tree from the input data,
+        creating leaf nodes from individual data elements and building
+        the tree structure bottom-up through hash aggregation.
+        
+        Args:
+            data: Input data to build tree from
+                - Dict: Dictionary of key-value pairs
+                - List: List of data elements
+                - str: String data
+                - bytes: Binary data
+                
+        Returns:
+            Root hash of the constructed Merkle tree
+            
+        Tree Construction Process:
+            1. Convert input data to leaf nodes
+            2. Hash each leaf node
+            3. Build parent nodes by hashing pairs of children
+            4. Repeat until single root node is created
+            5. Return root hash for verification
+        """
         try:
-            # Get hash function from factory
-            hash_func = HashFactory.get_hash_function()
+            # Convert data to leaf nodes
+            self.leaves = self._prepare_leaves(data)
             
-            # Serialize data to bytes, handling tensors
-            serialized_data = _serialize_data(data)
-            data_bytes = json.dumps(serialized_data, sort_keys=True).encode()
+            if not self.leaves:
+                raise ValueError("No valid leaves generated from input data")
             
-            # Compute hash
-            return hash_func(data_bytes)
+            # Build tree structure
+            self._build_tree_structure()
+            
+            # Calculate tree height
+            self.tree_height = self._calculate_tree_height()
+            
+            logger.info(f"Merkle tree built with {len(self.leaves)} leaves, "
+                       f"height: {self.tree_height}, root: {self.root_hash[:16]}...")
+            
+            return self.root_hash
+            
         except Exception as e:
-            logger.error(f"Error computing hash: {str(e)}")
+            logger.error(f"Failed to build Merkle tree: {e}")
             raise
     
+    def _prepare_leaves(self, data: Union[Dict[str, Any], List[Any], str, bytes]) -> List[str]:
+        """
+        Prepare leaf nodes from input data.
+        
+        This method converts the input data into a list of leaf nodes
+        that will form the base of the Merkle tree. The method handles
+        different data types and structures appropriately.
+        
+        Args:
+            data: Input data to convert to leaves
+            
+        Returns:
+            List of leaf node hashes
+            
+        Data Type Handling:
+            - Dict: Each key-value pair becomes a leaf
+            - List: Each element becomes a leaf
+            - str: String is split or treated as single leaf
+            - bytes: Binary data is chunked into leaves
+        """
+        leaves = []
+        
+        if isinstance(data, dict):
+            # Convert dictionary to sorted key-value pairs
+            for key, value in sorted(data.items()):
+                leaf_data = f"{key}:{json.dumps(value, sort_keys=True)}"
+                leaf_hash = self.hash_factory.hash(leaf_data.encode('utf-8'))
+                leaves.append(leaf_hash)
+                
+        elif isinstance(data, list):
+            # Convert list elements to leaves
+            for i, item in enumerate(data):
+                if isinstance(item, (dict, list)):
+                    item_str = json.dumps(item, sort_keys=True)
+                else:
+                    item_str = str(item)
+                
+                leaf_data = f"{i}:{item_str}"
+                leaf_hash = self.hash_factory.hash(leaf_data.encode('utf-8'))
+                leaves.append(leaf_hash)
+                
+        elif isinstance(data, str):
+            # Handle string data
+            leaf_hash = self.hash_factory.hash(data.encode('utf-8'))
+            leaves.append(leaf_hash)
+            
+        elif isinstance(data, bytes):
+            # Handle binary data
+            leaf_hash = self.hash_factory.hash(data)
+            leaves.append(leaf_hash)
+            
+        else:
+            # Convert other types to string
+            data_str = str(data)
+            leaf_hash = self.hash_factory.hash(data_str.encode('utf-8'))
+            leaves.append(leaf_hash)
+        
+        return leaves
+    
+    def _build_tree_structure(self) -> None:
+        """
+        Build the complete tree structure from leaves.
+        
+        This method constructs the complete Merkle tree structure by
+        creating parent nodes from pairs of child nodes, working
+        bottom-up until a single root node is created.
+        
+        Tree Building Algorithm:
+            1. Start with leaf nodes at level 0
+            2. For each level, pair adjacent nodes
+            3. Hash each pair to create parent nodes
+            4. Repeat until single root node remains
+            5. Store all nodes in self.nodes for later access
+        """
+        if not self.leaves:
+            raise ValueError("No leaves available for tree construction")
+        
+        # Initialize level 0 with leaves
+        current_level = 0
+        self.nodes[current_level] = self.leaves.copy()
+        
+        # Build tree levels bottom-up
+        while len(self.nodes[current_level]) > 1:
+            current_nodes = self.nodes[current_level]
+            next_level = current_level + 1
+            self.nodes[next_level] = []
+            
+            # Process nodes in pairs
+            for i in range(0, len(current_nodes), 2):
+                left_node = current_nodes[i]
+                right_node = current_nodes[i + 1] if i + 1 < len(current_nodes) else left_node
+                
+                # Create parent node by hashing the pair
+                parent_data = left_node + right_node
+                parent_hash = self.hash_factory.hash(parent_data.encode('utf-8'))
+                self.nodes[next_level].append(parent_hash)
+            
+            current_level = next_level
+        
+        # Set root hash
+        if self.nodes[current_level]:
+            self.root_hash = self.nodes[current_level][0]
+        else:
+            raise ValueError("Failed to construct tree root")
+    
+    def _calculate_tree_height(self) -> int:
+        """
+        Calculate the height of the constructed tree.
+        
+        Returns:
+            Height of the Merkle tree (number of levels)
+        """
+        return len(self.nodes) - 1 if self.nodes else 0
+    
+    def generate_proof(self, leaf_index: int) -> Dict[str, Any]:
+        """
+        Generate cryptographic proof for a specific leaf.
+        
+        This method creates a cryptographic proof that a specific leaf
+        is part of the Merkle tree. The proof consists of sibling hashes
+        at each level needed to reconstruct the path to the root.
+        
+        Args:
+            leaf_index: Index of the leaf to generate proof for
+            
+        Returns:
+            Dictionary containing proof information
+            
+        Proof Structure:
+            - leaf_index: Index of the proven leaf
+            - leaf_hash: Hash of the leaf node
+            - siblings: List of sibling hashes for each level
+            - path: Binary path from leaf to root
+            - root_hash: Root hash for verification
+        """
+        if not self.root_hash:
+            raise ValueError("Merkle tree not built")
+        
+        if leaf_index < 0 or leaf_index >= len(self.leaves):
+            raise ValueError(f"Invalid leaf index: {leaf_index}")
+        
+        try:
+            proof = {
+                'leaf_index': leaf_index,
+                'leaf_hash': self.leaves[leaf_index],
+                'siblings': [],
+                'path': [],
+                'root_hash': self.root_hash,
+                'tree_height': self.tree_height
+            }
+            
+            # Generate proof path
+            current_index = leaf_index
+            current_level = 0
+            
+            while current_level < self.tree_height:
+                current_nodes = self.nodes[current_level]
+                
+                # Determine if current node is left or right child
+                is_left = current_index % 2 == 0
+                
+                # Get sibling index
+                if is_left:
+                    sibling_index = current_index + 1
+                    proof['path'].append(0)  # 0 for left
+                else:
+                    sibling_index = current_index - 1
+                    proof['path'].append(1)  # 1 for right
+                
+                # Add sibling hash to proof
+                if sibling_index < len(current_nodes):
+                    proof['siblings'].append(current_nodes[sibling_index])
+                else:
+                    # Handle case where sibling doesn't exist (odd number of nodes)
+                    proof['siblings'].append(current_nodes[current_index])
+                
+                # Move to parent level
+                current_index = current_index // 2
+                current_level += 1
+            
+            logger.info(f"Generated proof for leaf {leaf_index}")
+            return proof
+            
+        except Exception as e:
+            logger.error(f"Failed to generate proof for leaf {leaf_index}: {e}")
+            raise
+    
+    def verify_proof(self, proof: Dict[str, Any], leaf_data: Union[str, bytes]) -> bool:
+        """
+        Verify a cryptographic proof for a leaf.
+        
+        This method verifies that a given leaf data is part of the Merkle
+        tree by reconstructing the path to the root using the provided proof.
+        
+        Args:
+            proof: Proof dictionary from generate_proof()
+            leaf_data: Original leaf data to verify
+            
+        Returns:
+            True if proof is valid, False otherwise
+            
+        Verification Process:
+            1. Hash the leaf data
+            2. Use proof siblings to reconstruct path to root
+            3. Compare computed root with proof root
+            4. Return True if they match, False otherwise
+        """
+        try:
+            # Hash the leaf data
+            if isinstance(leaf_data, str):
+                leaf_hash = self.hash_factory.hash(leaf_data.encode('utf-8'))
+            else:
+                leaf_hash = self.hash_factory.hash(leaf_data)
+            
+            # Verify leaf hash matches proof
+            if leaf_hash != proof['leaf_hash']:
+                logger.warning("Leaf hash mismatch in proof verification")
+                return False
+            
+            # Reconstruct path to root
+            current_hash = leaf_hash
+            siblings = proof['siblings']
+            path = proof['path']
+            
+            for i, (sibling_hash, direction) in enumerate(zip(siblings, path)):
+                if direction == 0:  # Left child
+                    parent_data = current_hash + sibling_hash
+                else:  # Right child
+                    parent_data = sibling_hash + current_hash
+                
+                current_hash = self.hash_factory.hash(parent_data.encode('utf-8'))
+            
+            # Compare with root hash
+            is_valid = current_hash == proof['root_hash']
+            
+            if is_valid:
+                logger.info(f"Proof verification successful for leaf {proof['leaf_index']}")
+            else:
+                logger.warning(f"Proof verification failed for leaf {proof['leaf_index']}")
+            
+            return is_valid
+            
+        except Exception as e:
+            logger.error(f"Failed to verify proof: {e}")
+            return False
+    
+    def get_tree_info(self) -> Dict[str, Any]:
+        """
+        Get comprehensive information about the Merkle tree.
+        
+        Returns:
+            Dictionary containing tree information
+        """
+        return {
+            'root_hash': self.root_hash,
+            'tree_height': self.tree_height,
+            'leaf_count': len(self.leaves),
+            'hash_algorithm': self.hash_algorithm,
+            'total_nodes': sum(len(nodes) for nodes in self.nodes.values()),
+            'levels': {level: len(nodes) for level, nodes in self.nodes.items()}
+        }
+    
+    def save_tree(self, filepath: Union[str, Path]) -> None:
+        """
+        Save Merkle tree to file.
+        
+        This method serializes the complete Merkle tree structure to a JSON file
+        for persistence and later reconstruction.
+        
+        Args:
+            filepath: Path to save the tree file
+        """
+        try:
+            tree_data = {
+                'root_hash': self.root_hash,
+                'tree_height': self.tree_height,
+                'leaves': self.leaves,
+                'nodes': self.nodes,
+                'hash_algorithm': self.hash_algorithm,
+                'metadata': {
+                    'created_at': self._get_timestamp(),
+                    'leaf_count': len(self.leaves),
+                    'total_nodes': sum(len(nodes) for nodes in self.nodes.values())
+                }
+            }
+            
+            with open(filepath, 'w') as f:
+                json.dump(tree_data, f, indent=2, default=str)
+            
+            logger.info(f"Merkle tree saved to: {filepath}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save Merkle tree: {e}")
+            raise
+    
+    def load_tree(self, filepath: Union[str, Path]) -> None:
+        """
+        Load Merkle tree from file.
+        
+        This method deserializes a Merkle tree from a JSON file and
+        reconstructs the complete tree structure.
+        
+        Args:
+            filepath: Path to the tree file to load
+        """
+        try:
+            with open(filepath, 'r') as f:
+                tree_data = json.load(f)
+            
+            # Restore tree state
+            self.root_hash = tree_data['root_hash']
+            self.tree_height = tree_data['tree_height']
+            self.leaves = tree_data['leaves']
+            self.nodes = {int(k): v for k, v in tree_data['nodes'].items()}
+            self.hash_algorithm = tree_data['hash_algorithm']
+            
+            # Reinitialize hash factory
+            self.hash_factory.set_algorithm(self.hash_algorithm)
+            
+            logger.info(f"Merkle tree loaded from: {filepath}")
+            
+        except Exception as e:
+            logger.error(f"Failed to load Merkle tree: {e}")
+            raise
+    
+    def _get_timestamp(self) -> str:
+        """
+        Get current timestamp string.
+        
+        Returns:
+            ISO format timestamp string
+        """
+        from datetime import datetime
+        return datetime.now().isoformat()
+    
+    def get_root_hash(self) -> Optional[str]:
+        """
+        Get the root hash of the Merkle tree.
+        
+        Returns:
+            Root hash string, or None if tree not built
+        """
+        return self.root_hash
+    
+    def get_leaf_count(self) -> int:
+        """
+        Get the number of leaves in the tree.
+        
+        Returns:
+            Number of leaf nodes
+        """
+        return len(self.leaves)
+    
+    def get_tree_height(self) -> int:
+        """
+        Get the height of the tree.
+        
+        Returns:
+            Height of the Merkle tree
+        """
+        return self.tree_height
+    
+    def is_built(self) -> bool:
+        """
+        Check if the tree has been built.
+        
+        Returns:
+            True if tree is built, False otherwise
+        """
+        return self.root_hash is not None
+
     def add_node(self, data: Dict[str, Any], parent: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Add a node to the Merkle tree.
@@ -458,12 +912,6 @@ class MLProvenanceMerkleTree:
             Node dictionary if found, None otherwise
         """
         return self.nodes.get(node_type)
-
-    def get_root_hash(self) -> str:
-        """Get the root hash of the Merkle tree."""
-        if self.root is None:
-            raise ValueError("Merkle tree has not been built yet")
-        return self.root["hash"]
 
     def get_component_proof(self, component: str) -> Optional[Dict[str, Any]]:
         """

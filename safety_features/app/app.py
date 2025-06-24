@@ -40,7 +40,7 @@ def load_tokenizer():
 def load_latest_model():
     try:
         model_path = Path('artifacts/provenance')
-        model_files = list(model_path.glob('**/trained_model.pt'))
+        model_files = list(model_path.glob('**/model.pth'))
         if not model_files:
             return None, None
         
@@ -161,7 +161,7 @@ def model_info():
 
         # Get model information
         model_path = Path('artifacts/provenance')
-        model_files = list(model_path.glob('**/trained_model.pt'))
+        model_files = list(model_path.glob('**/model.pth'))
         if not model_files:
             return jsonify({
                 'error': 'No model files found'

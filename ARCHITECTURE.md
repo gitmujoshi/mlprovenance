@@ -1,914 +1,361 @@
-# ML Provenance and Safety Architecture
+# System Architecture: Blockchain-Enabled ML Provenance Tracking
 
-## Executive Summary
+## Overview
 
-This document presents the architecture for a comprehensive machine learning provenance and safety system designed for production-scale AI deployments. The system provides cryptographic verification of model lineage, automated safety checks, and regulatory compliance across multiple ML frameworks.
+This document describes the architecture of a comprehensive machine learning provenance tracking system with blockchain integration. The system provides immutable, tamper-evident audit trails for ML training processes by storing Merkle tree hashes on multiple blockchain networks.
 
-## System Architecture Overview
-
-### Core Design Principles
-
-1. **Cryptographic Integrity**: Merkle tree-based provenance verification
-2. **Framework Agnostic**: Support for PyTorch, TensorFlow, and JAX
-3. **Safety by Design**: Integrated safety mechanisms at every layer
-4. **Regulatory Compliance**: Built-in GDPR, CCPA, and industry-specific compliance
-5. **Production Ready**: Scalable, fault-tolerant, and monitoring-enabled
-
-### High-Level Architecture
+## High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    ML Provenance & Safety System            │
-├─────────────────────────────────────────────────────────────┤
-│  Framework Layer (PyTorch/TensorFlow/JAX)                   │
-│  ├── Safety Wrappers                                        │
-│  ├── Provenance Trackers                                    │
-│  └── Compliance Checkers                                    │
-├─────────────────────────────────────────────────────────────┤
-│  Core Services Layer                                        │
-│  ├── Merkle Tree Engine                                     │
-│  ├── Safety Validation Engine                               │
-│  ├── Privacy Preservation Engine                            │
-│  └── Compliance Verification Engine                         │
-├─────────────────────────────────────────────────────────────┤
-│  Data Layer                                                  │
-│  ├── Provenance Storage                                     │
-│  ├── Safety Metrics Storage                                 │
-│  └── Audit Trail Storage                                    │
+│                    ML Training Pipeline                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Data       │  │   Model      │  │   Training       │  │
+│  │  Provenance  │  │  Provenance  │  │  Provenance      │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 ProvenanceTracker                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   Merkle Tree   │  │  Blockchain     │  │  Provenance  │ │
+│  │   Generation    │  │  Integration    │  │  Data        │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 BlockchainManager                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Ethereum   │  │   Bitcoin    │  │      IPFS        │  │
+│  │  Interface   │  │  Interface   │  │    Interface     │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Core Components
 
-### 1. Framework Integration Layer
+### 1. ProvenanceTracker
 
-The Framework Integration Layer provides safety wrappers for each major ML framework. These wrappers act as middleware that intercepts model inputs and outputs, applying safety checks and provenance tracking without requiring changes to the underlying model code.
+The main orchestrator that coordinates all provenance tracking activities.
 
-#### PyTorch Safety Wrapper
+**Key Responsibilities:**
+- Initialize and manage blockchain connections
+- Coordinate data, model, and training tracking
+- Store Merkle root hashes on blockchain networks
+- Generate and verify blockchain proofs
+- Generate comprehensive reports
 
-The PyTorch Safety Wrapper is designed to work seamlessly with PyTorch models, providing input/output validation, safety checks, and provenance tracking. It implements a non-intrusive approach that wraps existing PyTorch models without requiring architectural changes.
-
-**Key Features:**
-- **Input Validation**: Ensures data types, shapes, and numerical stability
-- **Output Validation**: Verifies model outputs meet safety criteria
-- **Safety Penalty Computation**: Calculates penalties for safety violations
-- **Provenance Tracking**: Records statistics and hashes for audit trails
-
+**Key Methods:**
 ```python
-class PyTorchSafetyWrapper:
-    def __init__(self, config: SafetyConfig):
-        self.config = config
-        self.provenance_tracker = ProvenanceTracker()
-        self.safety_validator = SafetyValidator()
-        
-    def validate_input(self, x: torch.Tensor) -> torch.Tensor:
-        """Validate input tensor with safety checks"""
-        if not isinstance(x, torch.Tensor):
-            raise TypeError("Input must be a PyTorch tensor")
-            
-        # Numerical stability checks
-        if torch.isnan(x).any() or torch.isinf(x).any():
-            raise ValueError("Input contains NaN or Inf values")
-            
-        # Safety validation
-        x = self.safety_validator.validate_input(x)
-        
-        # Provenance tracking
-        self.provenance_tracker.track_input_stats({
-            'mean': x.mean().item(),
-            'std': x.std().item(),
-            'shape': x.shape,
-            'hash': self._compute_hash(x)
-        })
-        
-        return x
-        
-    def validate_output(self, output: torch.Tensor) -> torch.Tensor:
-        """Validate output tensor with safety checks"""
-        if not isinstance(output, torch.Tensor):
-            raise TypeError("Output must be a PyTorch tensor")
-            
-        # Numerical stability checks
-        if torch.isnan(output).any() or torch.isinf(output).any():
-            raise ValueError("Output contains NaN or Inf values")
-            
-        # Safety validation
-        output = self.safety_validator.validate_output(output)
-        
-        # Provenance tracking
-        self.provenance_tracker.track_output_stats({
-            'mean': output.mean().item(),
-            'std': output.std().item(),
-            'shape': output.shape,
-            'hash': self._compute_hash(output)
-        })
-        
-        return output
-        
-    def compute_safety_penalty(self, output: torch.Tensor) -> torch.Tensor:
-        """Compute safety violation penalty"""
-        penalty = torch.tensor(0.0, device=output.device)
-        
-        # Distribution checks
-        if self.config.check_distribution:
-            penalty += self._check_distribution(output)
-            
-        # Bias checks
-        if self.config.check_bias:
-            penalty += self._check_bias(output)
-            
-        # Privacy checks
-        if self.config.check_privacy:
-            penalty += self._check_privacy(output)
-            
-        return penalty
+class ProvenanceTracker:
+    def __init__(self, base_dir="artifacts", config: Optional[Dict[str, Any]] = None)
+    def track_data(self, train_data, test_data)
+    def track_model(self, model)
+    def store_merkle_on_blockchain_before_training(self, training_config)
+    def store_merkle_on_blockchain_after_training(self, training_results)
+    def verify_blockchain_provenance(self)
+    def save_blockchain_report(self, output_path=None)
+    def get_blockchain_status(self)
 ```
 
-**Code Explanation:**
-- **`__init__`**: Initializes the wrapper with safety configuration and creates instances of provenance tracker and safety validator
-- **`validate_input`**: Performs comprehensive input validation including type checking, numerical stability verification, and safety validation, then tracks input statistics for provenance
-- **`validate_output`**: Similar to input validation but for model outputs, ensuring outputs meet safety criteria and tracking output statistics
-- **`compute_safety_penalty`**: Calculates penalties for safety violations based on distribution, bias, and privacy checks, which can be incorporated into the training loss
+### 2. BlockchainManager
 
-#### TensorFlow Safety Wrapper
+Manages multiple blockchain network interfaces and provides unified operations.
 
-The TensorFlow Safety Wrapper provides similar functionality for TensorFlow models, leveraging TensorFlow's graph execution and automatic differentiation capabilities. It uses the `@tf.function` decorator for optimized execution.
+**Key Responsibilities:**
+- Initialize blockchain interfaces (Ethereum, Bitcoin, IPFS)
+- Store hashes on multiple networks
+- Verify hashes across networks
+- Handle network-specific errors and retries
 
-**Key Features:**
-- **Graph-Optimized Execution**: Uses TensorFlow's graph compilation for performance
-- **TensorFlow-Native Operations**: Leverages TensorFlow's built-in validation functions
-- **Eager Mode Compatibility**: Works in both eager and graph execution modes
-- **Gradient Tape Integration**: Compatible with TensorFlow's automatic differentiation
-
+**Key Methods:**
 ```python
-class TensorFlowSafetyWrapper:
-    def __init__(self, config: SafetyConfig):
-        self.config = config
-        self.provenance_tracker = ProvenanceTracker()
-        self.safety_validator = SafetyValidator()
-        
-    @tf.function
-    def validate_input(self, inputs: tf.Tensor) -> tf.Tensor:
-        """Validate input tensor with safety checks"""
-        if not isinstance(inputs, tf.Tensor):
-            raise TypeError("Input must be a TensorFlow tensor")
-            
-        # Numerical stability checks
-        if tf.reduce_any(tf.math.is_nan(inputs)) or tf.reduce_any(tf.math.is_inf(inputs)):
-            raise ValueError("Input contains NaN or Inf values")
-            
-        # Safety validation
-        inputs = self.safety_validator.validate_input(inputs)
-        
-        # Provenance tracking
-        self.provenance_tracker.track_input_stats({
-            'mean': tf.reduce_mean(inputs).numpy(),
-            'std': tf.math.reduce_std(inputs).numpy(),
-            'shape': inputs.shape,
-            'hash': self._compute_hash(inputs)
-        })
-        
-        return inputs
+class BlockchainManager:
+    def __init__(self, config: Dict[str, Any])
+    def store_merkle_hash(self, merkle_root_hash, metadata, networks=None)
+    def verify_merkle_hash(self, merkle_root_hash, transaction_ids)
+    def get_transaction_info(self, transaction_ids)
 ```
 
-**Code Explanation:**
-- **`@tf.function`**: Decorator that compiles the function into a TensorFlow graph for optimized execution
-- **`tf.reduce_any`**: TensorFlow's efficient way to check for NaN or Inf values across the entire tensor
-- **`tf.math.is_nan/is_inf`**: TensorFlow's built-in functions for detecting numerical instabilities
-- **`.numpy()`**: Converts TensorFlow tensors to NumPy arrays for storage and serialization
-
-#### JAX Safety Wrapper
-
-The JAX Safety Wrapper is designed for high-performance computing scenarios, leveraging JAX's JIT compilation and functional programming paradigm. It's optimized for large-scale training and inference.
-
-**Key Features:**
-- **JIT Compilation**: Uses JAX's just-in-time compilation for maximum performance
-- **Functional Design**: Follows JAX's functional programming principles
-- **GPU/TPU Optimization**: Leverages JAX's automatic device placement
-- **Gradient Computation**: Compatible with JAX's automatic differentiation
-
-```python
-class JAXSafetyWrapper:
-    def __init__(self, config: SafetyConfig):
-        self.config = config
-        self.provenance_tracker = ProvenanceTracker()
-        self.safety_validator = SafetyValidator()
-        
-    @jax.jit
-    def validate_input(self, x: jnp.ndarray) -> jnp.ndarray:
-        """Validate input array with safety checks"""
-        # JAX-specific validation
-        x = self.safety_validator.validate_input(x)
-        return x
-        
-    @jax.jit
-    def validate_output(self, output: jnp.ndarray) -> jnp.ndarray:
-        """Validate output array with safety checks"""
-        # JAX-specific validation
-        output = self.safety_validator.validate_output(output)
-        return output
-```
-
-**Code Explanation:**
-- **`@jax.jit`**: JAX's just-in-time compilation decorator that optimizes function execution for speed
-- **`jnp.ndarray`**: JAX's NumPy-compatible array type that supports automatic differentiation
-- **Functional approach**: JAX functions are pure and side-effect free, making them ideal for parallel execution
-
-### 2. Merkle Tree Engine
-
-The Merkle Tree Engine provides cryptographic verification of data integrity and enables efficient proof generation for large datasets. It's the foundation of the system's trust and verification capabilities.
-
-#### Core Merkle Tree Implementation
-
-A Merkle tree is a hierarchical data structure that allows efficient verification of data integrity. Each leaf node contains a hash of a data block, and each non-leaf node contains a hash of its children. This structure enables efficient proof generation and verification.
-
-**Key Features:**
-- **Cryptographic Integrity**: Uses configurable hash functions for tamper detection
-- **Efficient Verification**: O(log n) complexity for proof verification
-- **Batch Processing**: Can handle large numbers of data blocks efficiently
-- **Proof Generation**: Generates compact proofs for individual data items
-- **Configurable Hashing**: Supports multiple hash algorithms (SHA-256, BLAKE3, SHA-512, etc.)
-
-#### Configurable Hash Algorithm Support
-
-The system supports multiple hash algorithms to meet different requirements for security, performance, and compatibility:
-
-**Supported Algorithms:**
-- **SHA-256**: Industry standard, balanced security and performance
-- **BLAKE3**: High-performance, parallelizable, secure
-- **SHA-512**: Maximum security, quantum-resistant
-- **SHA-1**: Legacy support (not recommended for security)
-- **MD5**: Legacy support (not recommended for security)
-
-**Algorithm Selection:**
-```python
-class HashConfig:
-    def __init__(self, hash_algorithm: str = "sha256"):
-        self.hash_algorithm = hash_algorithm.lower()
-        self._validate_algorithm()
-        
-    def get_hash_function(self) -> Callable[[bytes], str]:
-        if self.hash_algorithm == "sha256":
-            return lambda data: hashlib.sha256(data).hexdigest()
-        elif self.hash_algorithm == "blake3":
-            return lambda data: blake3.blake3(data).hexdigest()
-        elif self.hash_algorithm == "sha512":
-            return lambda data: hashlib.sha512(data).hexdigest()
-        # ... other algorithms
-```
-
-**Training Configuration Integration:**
-```python
-class TrainingHashConfig:
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        self.hash_algorithm = self._get_hash_algorithm_from_config()
-        self.hash_config = HashConfig(self.hash_algorithm)
-        
-    def _get_hash_algorithm_from_config(self) -> str:
-        return (
-            self.config.get("hash_algorithm") or
-            self.config.get("provenance", {}).get("hash_algorithm") or
-            "sha256"  # default
-        )
-```
-
-```python
-class MerkleTree:
-    def __init__(self, data: List[bytes]):
-        self.data = data
-        # Use configurable hash function
-        hash_func = HashFactory.get_hash_function()
-        self.leaves = [hash_func(item).encode() for item in data]
-        self.tree = self._build_tree(self.leaves)
-        self.root = self.tree[-1][0] if self.tree else None
-        
-    def _build_tree(self, leaves: List[bytes]) -> List[List[bytes]]:
-        """Build Merkle tree from leaf nodes"""
-        if len(leaves) == 0:
-            return []
-        if len(leaves) == 1:
-            return [leaves]
-            
-        tree = [leaves]
-        current_level = leaves
-        
-        while len(current_level) > 1:
-            next_level = []
-            for i in range(0, len(current_level), 2):
-                if i + 1 < len(current_level):
-                    combined = current_level[i] + current_level[i + 1]
-                else:
-                    combined = current_level[i] + current_level[i]
-                # Use configurable hash function
-                hash_func = HashFactory.get_hash_function()
-                next_level.append(hash_func(combined).encode())
-            tree.append(next_level)
-            current_level = next_level
-            
-        return tree
-        
-    def get_proof(self, index: int) -> List[bytes]:
-        """Generate Merkle proof for data at given index"""
-        if index >= len(self.leaves):
-            raise ValueError("Index out of range")
-            
-        proof = []
-        current_index = index
-        
-        for level in self.tree[:-1]:
-            if current_index % 2 == 0:
-                if current_index + 1 < len(level):
-                    proof.append(level[current_index + 1])
-                else:
-                    proof.append(level[current_index])
-            else:
-                proof.append(level[current_index - 1])
-            current_index //= 2
-            
-        return proof
-        
-    def verify_proof(self, data: bytes, proof: List[bytes], index: int) -> bool:
-        """Verify Merkle proof for given data"""
-        # Use configurable hash function
-        hash_func = HashFactory.get_hash_function()
-        current_hash = hash_func(data).encode()
-        current_index = index
-        
-        for sibling_hash in proof:
-            if current_index % 2 == 0:
-                combined = current_hash + sibling_hash
-            else:
-                combined = sibling_hash + current_hash
-            current_hash = hash_func(combined).encode()
-            current_index //= 2
-            
-        return current_hash == self.root
-```
-
-**Code Explanation:**
-- **`__init__`**: Initializes the tree by computing hashes of all input data using the configured hash function
-- **`_build_tree`**: Recursively builds the tree by combining pairs of nodes and computing their combined hash using the configured algorithm
-- **`get_proof`**: Generates a proof path from a leaf to the root, collecting sibling hashes along the way
-- **`verify_proof`**: Reconstructs the path to the root using the provided proof and verifies it matches the stored root hash
-- **`HashFactory.get_hash_function()`**: Retrieves the currently configured hash function from the factory
-- **Configurable Hashing**: All hash operations use the algorithm specified in the training configuration
-
-#### Provenance Merkle Tree
-
-The Provenance Merkle Tree extends the basic Merkle tree to handle provenance records specifically. It provides methods for adding provenance records, generating proofs, and verifying the integrity of the provenance chain.
-
-**Key Features:**
-- **Provenance Record Management**: Handles structured provenance records
-- **Automatic Tree Updates**: Rebuilds the tree when new records are added
-- **Proof Generation**: Creates cryptographic proofs for individual records
-- **Verification**: Validates the integrity of provenance records
-
-```python
-class ProvenanceMerkleTree:
-    def __init__(self):
-        self.provenance_records = []
-        self.merkle_tree = None
-        
-    def add_provenance_record(self, record: dict) -> str:
-        """Add provenance record and update Merkle tree"""
-        record_bytes = self._serialize_record(record)
-        record_hash = hashlib.sha256(record_bytes).hexdigest()
-        
-        self.provenance_records.append({
-            'record': record,
-            'hash': record_hash,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-        self._rebuild_tree()
-        return record_hash
-        
-    def get_provenance_proof(self, record_hash: str) -> dict:
-        """Generate proof for specific provenance record"""
-        record_index = None
-        for i, record in enumerate(self.provenance_records):
-            if record['hash'] == record_hash:
-                record_index = i
-                break
-                
-        if record_index is None:
-            raise ValueError("Record not found")
-            
-        proof = self.merkle_tree.get_proof(record_index)
-        
-        return {
-            'record_hash': record_hash,
-            'proof': [p.hex() for p in proof],
-            'root_hash': self.merkle_tree.root.hex(),
-            'index': record_index
-        }
-```
-
-**Code Explanation:**
-- **`add_provenance_record`**: Serializes a provenance record, computes its hash, stores it with a timestamp, and rebuilds the Merkle tree
-- **`get_provenance_proof`**: Finds a record by its hash, generates a Merkle proof for it, and returns the proof along with metadata
-- **`_serialize_record`**: Converts the record dictionary to bytes for hashing (implementation not shown)
-- **`_rebuild_tree`**: Reconstructs the entire Merkle tree from the current set of records
-
-### 3. Safety Validation Engine
-
-The Safety Validation Engine provides comprehensive safety checks for ML models, including bias detection, privacy preservation, and content safety validation.
-
-#### Bias Detection and Mitigation
-
-Bias detection is crucial for ensuring fair and equitable AI systems. This component implements multiple fairness metrics and provides mechanisms for bias mitigation.
-
-**Key Features:**
-- **Multiple Fairness Metrics**: Implements various definitions of fairness
-- **Sensitive Attribute Handling**: Works with protected attributes like race, gender, age
-- **Bias Mitigation**: Provides techniques for reducing bias in models
-- **Statistical Analysis**: Performs rigorous statistical testing
-
-```python
-class BiasDetector:
-    def __init__(self, config: BiasConfig):
-        self.config = config
-        
-    def detect_bias(self, model, data, sensitive_attributes) -> dict:
-        """Detect bias in model predictions"""
-        predictions = model.predict(data)
-        
-        return {
-            'demographic_parity': self.compute_demographic_parity(predictions, sensitive_attributes),
-            'equal_opportunity': self.compute_equal_opportunity(predictions, sensitive_attributes),
-            'equalized_odds': self.compute_equalized_odds(predictions, sensitive_attributes),
-            'statistical_parity': self.compute_statistical_parity(predictions, sensitive_attributes)
-        }
-        
-    def mitigate_bias(self, model, data, sensitive_attributes) -> Any:
-        """Apply bias mitigation techniques"""
-        # Implementation of bias mitigation
-        return mitigated_model
-```
-
-**Code Explanation:**
-- **`detect_bias`**: Computes multiple fairness metrics to identify different types of bias in model predictions
-- **`demographic_parity`**: Ensures similar prediction rates across different demographic groups
-- **`equal_opportunity`**: Ensures similar true positive rates across groups
-- **`equalized_odds`**: Ensures similar true positive and false positive rates across groups
-- **`statistical_parity`**: Ensures similar overall prediction distributions across groups
-
-#### Privacy Preservation Engine
-
-Privacy preservation is essential for protecting sensitive data while maintaining model utility. This component implements differential privacy and federated learning techniques.
-
-**Key Features:**
-- **Differential Privacy**: Provides mathematical privacy guarantees
-- **Federated Learning**: Enables training on distributed data
-- **Privacy Budget Management**: Tracks and manages privacy consumption
-- **Secure Multi-Party Computation**: Enables collaborative training
-
-```python
-class PrivacyPreserver:
-    def __init__(self, config: PrivacyConfig):
-        self.config = config
-        
-    def apply_differential_privacy(self, model, data, epsilon: float) -> Any:
-        """Apply differential privacy to model training"""
-        # Differential privacy implementation
-        return privacy_preserved_model
-        
-    def federated_learning(self, model, distributed_data) -> Any:
-        """Implement federated learning for privacy"""
-        # Federated learning implementation
-        return federated_model
-```
-
-**Code Explanation:**
-- **`apply_differential_privacy`**: Adds calibrated noise to gradients or outputs to provide ε-differential privacy
-- **`federated_learning`**: Implements federated learning where models are trained locally and only aggregated parameters are shared
-- **`epsilon`**: Privacy parameter that controls the strength of privacy guarantees
-
-### 4. Compliance Verification Engine
-
-The Compliance Verification Engine ensures that ML systems meet regulatory requirements and industry standards.
-
-#### Regulatory Compliance
-
-This component implements checks for various regulatory frameworks, including GDPR, CCPA, and industry-specific regulations.
-
-**Key Features:**
-- **GDPR Compliance**: Implements European data protection requirements
-- **CCPA Compliance**: Implements California privacy requirements
-- **Industry Standards**: Supports healthcare, financial, and other industry regulations
-- **Automated Auditing**: Provides automated compliance checking
-
-```python
-class ComplianceChecker:
-    def __init__(self, config: ComplianceConfig):
-        self.config = config
-        
-    def check_gdpr_compliance(self, model, data) -> dict:
-        """Check GDPR compliance"""
-        return {
-            'data_minimization': self.check_data_minimization(data),
-            'purpose_limitation': self.check_purpose_limitation(data),
-            'storage_limitation': self.check_storage_limitation(data),
-            'accuracy': self.check_accuracy(model),
-            'integrity': self.check_integrity(model),
-            'confidentiality': self.check_confidentiality(model)
-        }
-        
-    def check_ccpa_compliance(self, model, data) -> dict:
-        """Check CCPA compliance"""
-        return {
-            'right_to_know': self.check_right_to_know(data),
-            'right_to_delete': self.check_right_to_delete(data),
-            'right_to_opt_out': self.check_right_to_opt_out(data),
-            'financial_incentives': self.check_financial_incentives(data)
-        }
-```
-
-**Code Explanation:**
-- **`check_gdpr_compliance`**: Implements the seven principles of GDPR including data minimization, purpose limitation, and storage limitation
-- **`check_ccpa_compliance`**: Implements California Consumer Privacy Act requirements including rights to know, delete, and opt-out
-- **`data_minimization`**: Ensures only necessary data is collected and processed
-- **`purpose_limitation`**: Ensures data is used only for specified purposes
-- **`storage_limitation`**: Ensures data is not kept longer than necessary
-
-## Data Flow Architecture
-
-### Training Pipeline with Safety
-
-The training pipeline integrates safety checks and provenance tracking into the standard ML training process. This diagram shows how data flows through the system and where safety checks are applied.
-
-**Key Components:**
-- **Client**: Initiates training requests
-- **SafetyWrapper**: Applies safety checks to inputs and outputs
-- **Model**: The actual ML model being trained
-- **ProvenanceTracker**: Records training metrics and artifacts
-- **MerkleTree**: Provides cryptographic verification
-- **ComplianceChecker**: Verifies regulatory compliance
-- **ReportGenerator**: Creates comprehensive reports
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant SafetyWrapper
-    participant Model
-    participant ProvenanceTracker
-    participant MerkleTree
-    participant ComplianceChecker
-    participant ReportGenerator
-
-    Client->>SafetyWrapper: Initialize with config
-    SafetyWrapper->>ProvenanceTracker: Start tracking session
-    
-    loop Training Steps
-        Client->>SafetyWrapper: Input data
-        SafetyWrapper->>SafetyWrapper: Validate input
-        SafetyWrapper->>Model: Forward pass
-        Model->>SafetyWrapper: Output
-        SafetyWrapper->>SafetyWrapper: Validate output
-        SafetyWrapper->>SafetyWrapper: Compute safety penalty
-        SafetyWrapper->>ProvenanceTracker: Track metrics
-        ProvenanceTracker->>MerkleTree: Add provenance record
-    end
-    
-    SafetyWrapper->>ComplianceChecker: Verify compliance
-    ComplianceChecker->>ReportGenerator: Generate compliance report
-    ProvenanceTracker->>ReportGenerator: Generate provenance report
-    ReportGenerator->>Client: Return comprehensive report
-```
-
-**Flow Explanation:**
-1. **Initialization**: The client initializes the safety wrapper with configuration parameters
-2. **Training Loop**: For each training step, input data is validated, processed through the model, and output is validated
-3. **Safety Penalty**: Safety violations are computed and can be incorporated into the loss function
-4. **Provenance Tracking**: All metrics and artifacts are recorded for audit purposes
-5. **Compliance Checking**: Regulatory compliance is verified throughout the process
-6. **Report Generation**: Comprehensive reports are generated for stakeholders
-
-### Provenance Verification Flow
-
-The provenance verification flow shows how cryptographic proofs are generated and verified to ensure data integrity.
-
-**Key Steps:**
-- **Record Creation**: New provenance records are created
-- **Hash Generation**: Cryptographic hashes are computed
-- **Tree Update**: The Merkle tree is updated with new hashes
-- **Proof Generation**: Cryptographic proofs are generated for verification
-- **Verification**: Proofs are verified against the stored root hash
-
-```mermaid
-graph TD
-    A[Provenance Record] --> B[Hash Generation]
-    B --> C[Merkle Tree Update]
-    C --> D[Root Hash Update]
-    D --> E[Proof Generation]
-    E --> F[Verification Request]
-    F --> G[Proof Verification]
-    G --> H[Integrity Confirmation]
-```
-
-**Flow Explanation:**
-1. **Provenance Record**: A new record is created containing training metrics, model state, or other relevant information
-2. **Hash Generation**: The record is serialized and a cryptographic hash is computed
-3. **Merkle Tree Update**: The hash is added to the Merkle tree, and the tree is rebuilt
-4. **Root Hash Update**: The root hash of the tree is updated to reflect the new data
-5. **Proof Generation**: A cryptographic proof is generated that proves the record is part of the tree
-6. **Verification Request**: A request is made to verify the integrity of the record
-7. **Proof Verification**: The proof is verified against the stored root hash
-8. **Integrity Confirmation**: The system confirms that the data has not been tampered with
-
-## Performance and Scalability
-
-### Optimization Strategies
-
-The system implements several optimization strategies to ensure high performance and scalability in production environments.
-
-**Key Strategies:**
-1. **Batch Processing**: Efficient batch-wise provenance tracking
-2. **Lazy Evaluation**: On-demand proof generation
-3. **Caching**: Cache frequently accessed proofs
-4. **Parallel Processing**: Parallel safety checks and validation
-5. **Compression**: Compress provenance records for storage efficiency
-
-### Monitoring and Observability
-
-The monitoring system provides comprehensive visibility into system performance, safety metrics, and compliance status.
-
-**Key Features:**
-- **Real-time Metrics**: Track performance and safety metrics in real-time
-- **Dashboard Visualization**: Provide intuitive dashboards for monitoring
-- **Alert System**: Generate alerts for safety violations or performance issues
-- **Historical Analysis**: Analyze trends and patterns over time
-
-```python
-class SystemMonitor:
-    def __init__(self):
-        self.metrics = {
-            'safety': defaultdict(list),
-            'provenance': defaultdict(list),
-            'compliance': defaultdict(list),
-            'performance': defaultdict(list)
-        }
-        
-    def track_metric(self, category: str, name: str, value: float):
-        """Track system metrics"""
-        self.metrics[category][name].append(value)
-        
-    def generate_dashboard_data(self) -> dict:
-        """Generate dashboard data for monitoring"""
-        return {
-            'safety_violations': self._analyze_safety_metrics(),
-            'provenance_integrity': self._analyze_provenance_metrics(),
-            'compliance_status': self._analyze_compliance_metrics(),
-            'performance_metrics': self._analyze_performance_metrics()
-        }
-```
-
-**Code Explanation:**
-- **`__init__`**: Initializes metric storage for different categories (safety, provenance, compliance, performance)
-- **`track_metric`**: Records a metric value with its category and name for later analysis
-- **`generate_dashboard_data`**: Analyzes collected metrics and generates data for dashboard visualization
-- **`_analyze_*_metrics`**: Private methods that perform specific analysis for each metric category
-
-## Security Architecture
-
-### Security Layers
-
-The security architecture implements a multi-layered approach to protect the system from various threats.
-
-**Security Layers:**
-1. **Input Security**: Validation and sanitization of all inputs
-2. **Model Security**: Protection of model weights and architecture
-3. **Data Security**: Encryption and access control for sensitive data
-4. **Provenance Security**: Cryptographic integrity verification
-5. **Compliance Security**: Regulatory adherence verification
-
-### Threat Model
-
-The system is designed to protect against common threats in ML systems.
-
-**Threats Addressed:**
-- **Data Tampering**: Mitigated by Merkle tree verification
-- **Model Poisoning**: Detected by safety validation
-- **Privacy Breaches**: Prevented by privacy preservation
-- **Compliance Violations**: Caught by compliance checking
-
-## Deployment Architecture
-
-### Production Deployment
-
-The production deployment uses Docker Compose for easy setup and management of the entire system stack.
+### 3. Blockchain Interfaces
+
+#### EthereumInterface
+- Connects to Ethereum nodes via Web3
+- Supports smart contract interactions
+- Handles gas estimation and transaction signing
+
+#### BitcoinInterface
+- Connects to Bitcoin nodes via RPC
+- Uses OP_RETURN for data storage
+- Supports testnet and mainnet
+
+#### IPFSInterface
+- Connects to IPFS daemon via HTTP API
+- Stores content-addressed data
+- Provides CID-based verification
+
+### 4. Merkle Tree System
 
 **Components:**
-- **ML Provenance API**: Main application service
-- **Redis**: Caching and session storage
-- **PostgreSQL**: Persistent data storage
-- **Configuration**: Environment-specific configuration management
+- `MLProvenanceMerkleTree`: Main Merkle tree implementation
+- `MerkleNode`: Individual tree nodes
+- `HashFactory`: Configurable hash algorithm support
 
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  ml-provenance-api:
-    image: ml-provenance:latest
-    ports:
-      - "8000:8000"
-    environment:
-      - SAFETY_CONFIG_PATH=/config/safety.yaml
-      - PROVENANCE_STORAGE_PATH=/data/provenance
-      - COMPLIANCE_CONFIG_PATH=/config/compliance.yaml
-    volumes:
-      - ./config:/config
-      - ./data:/data
-    depends_on:
-      - redis
-      - postgres
-      
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-      
-  postgres:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=ml_provenance
-      - POSTGRES_USER=provenance_user
-      - POSTGRES_PASSWORD=secure_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+**Tree Structure:**
+```
+Root Hash
+├── Data Node
+│   ├── Training Data Hash
+│   └── Test Data Hash
+├── Model Node
+│   ├── Architecture Hash
+│   └── Weights Hash
+└── Training Node
+    ├── Epoch 1 Node
+    │   ├── Model State Hash
+    │   ├── Metrics Hash
+    │   └── Privacy Metrics Hash
+    ├── Epoch 2 Node
+    │   ├── Model State Hash
+    │   ├── Metrics Hash
+    │   └── Privacy Metrics Hash
+    └── ... (subsequent epochs)
 ```
 
-**Configuration Explanation:**
-- **`ml-provenance-api`**: Main application container with environment variables for configuration paths
-- **`redis`**: In-memory data store for caching and session management
-- **`postgres`**: Relational database for persistent storage of provenance records and metadata
-- **`volumes`**: Mounted volumes for configuration and data persistence
-- **`depends_on`**: Service dependencies ensuring proper startup order
+## Data Flow
 
-### Kubernetes Deployment
+### 1. Pre-Training Phase
 
-For production-scale deployments, Kubernetes provides orchestration, scaling, and high availability.
-
-**Features:**
-- **Horizontal Scaling**: Automatic scaling based on load
-- **High Availability**: Multiple replicas with health checks
-- **Configuration Management**: ConfigMaps and Secrets for configuration
-- **Persistent Storage**: Persistent volumes for data storage
-
-```yaml
-# k8s-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ml-provenance
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: ml-provenance
-  template:
-    metadata:
-      labels:
-        app: ml-provenance
-    spec:
-      containers:
-      - name: ml-provenance
-        image: ml-provenance:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: SAFETY_CONFIG_PATH
-          value: "/config/safety.yaml"
-        - name: PROVENANCE_STORAGE_PATH
-          value: "/data/provenance"
-        volumeMounts:
-        - name: config-volume
-          mountPath: /config
-        - name: data-volume
-          mountPath: /data
-      volumes:
-      - name: config-volume
-        configMap:
-          name: ml-provenance-config
-      - name: data-volume
-        persistentVolumeClaim:
-          claimName: ml-provenance-pvc
+```
+Data + Model → Merkle Tree → Root Hash → Blockchain Storage
 ```
 
-**Configuration Explanation:**
-- **`replicas: 3`**: Runs three instances of the application for high availability
-- **`selector`**: Kubernetes uses this to identify which pods belong to this deployment
-- **`containers`**: Defines the container specification including image, ports, and environment variables
-- **`volumeMounts`**: Mounts configuration and data volumes into the container
-- **`volumes`**: Defines the volumes using ConfigMaps for configuration and PersistentVolumeClaims for data
+1. **Data Tracking**: Generate hashes for training and test data
+2. **Model Tracking**: Generate hashes for model architecture
+3. **Merkle Tree Construction**: Build initial tree with data and model nodes
+4. **Blockchain Storage**: Store root hash on configured networks
+5. **Transaction Recording**: Store transaction IDs for verification
 
-## Integration Patterns
+### 2. Training Phase
 
-### Framework Integration
+```
+Training Process → Epoch Updates → Merkle Tree Updates
+```
 
-The system provides seamless integration with major ML frameworks through wrapper classes that can be easily integrated into existing codebases.
+1. **Epoch Tracking**: Track metrics, model state, and privacy budget
+2. **Tree Updates**: Add epoch nodes to Merkle tree
+3. **Hash Generation**: Generate new root hash after each epoch
+4. **Local Storage**: Store updated tree locally
 
-**Integration Benefits:**
-- **Non-intrusive**: Minimal changes to existing code
-- **Framework-specific**: Optimized for each framework's strengths
-- **Backward Compatible**: Works with existing models and training loops
-- **Configurable**: Flexible configuration for different use cases
+### 3. Post-Training Phase
 
-#### PyTorch Integration
+```
+Final Model + Results → Merkle Tree → Root Hash → Blockchain Storage
+```
 
-PyTorch integration leverages PyTorch's dynamic computation graphs and automatic differentiation.
+1. **Final State**: Capture final model state and metrics
+2. **Tree Completion**: Complete Merkle tree with all epochs
+3. **Blockchain Storage**: Store final root hash on networks
+4. **Verification**: Verify both pre and post-training hashes
+
+### 4. Verification Phase
+
+```
+Stored Hashes → Blockchain Verification → Integrity Report
+```
+
+1. **Hash Retrieval**: Retrieve stored hashes from blockchain
+2. **Local Verification**: Recompute hashes locally
+3. **Cross-Network Verification**: Verify across multiple networks
+4. **Report Generation**: Generate comprehensive verification report
+
+## Blockchain Integration Details
+
+### Supported Networks
+
+#### IPFS (InterPlanetary File System)
+- **Type**: Decentralized storage network
+- **Storage Method**: Content-addressed storage
+- **Advantages**: No fees, high availability, decentralized
+- **Use Case**: Development, testing, backup storage
+
+#### Ethereum
+- **Type**: Smart contract platform
+- **Storage Method**: Smart contract state
+- **Advantages**: Immutable, programmable, global consensus
+- **Use Case**: Production environments, regulatory compliance
+
+#### Bitcoin
+- **Type**: Cryptocurrency blockchain
+- **Storage Method**: OP_RETURN transactions
+- **Advantages**: Maximum security, long-term stability
+- **Use Case**: High-security requirements, long-term storage
+
+### Smart Contract Integration
+
+For production Ethereum deployments, a smart contract can be used:
+
+```solidity
+contract MLProvenance {
+    mapping(bytes32 => bool) public storedHashes;
+    mapping(bytes32 => uint256) public timestamps;
+    mapping(bytes32 => string) public metadata;
+    
+    event HashStored(bytes32 indexed merkleRoot, string metadata, uint256 timestamp);
+    
+    function storeHash(bytes32 merkleRoot, string memory metadataStr) public {
+        storedHashes[merkleRoot] = true;
+        timestamps[merkleRoot] = block.timestamp;
+        metadata[merkleRoot] = metadataStr;
+        emit HashStored(merkleRoot, metadataStr, block.timestamp);
+    }
+    
+    function verifyHash(bytes32 merkleRoot) public view returns (bool) {
+        return storedHashes[merkleRoot];
+    }
+}
+```
+
+## Configuration System
+
+### Blockchain Configuration
+
+```json
+{
+  "blockchain": {
+    "enabled": true,
+    "networks": ["ipfs", "ethereum"],
+    "ipfs": {
+      "enabled": true,
+      "url": "http://localhost:5001",
+      "timeout": 30,
+      "retry_attempts": 3
+    },
+    "ethereum": {
+      "enabled": true,
+      "rpc_url": "http://127.0.0.1:8545",
+      "private_key": "your_private_key",
+      "contract_address": null,
+      "gas_limit": 300000,
+      "gas_price": "auto"
+    },
+    "storage_options": {
+      "store_before_training": true,
+      "store_after_training": true,
+      "store_epoch_checkpoints": false
+    }
+  }
+}
+```
+
+### Training Configuration
 
 ```python
-# PyTorch Integration
-class SafePyTorchModel(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.model = YourModel()
-        self.safety_wrapper = PyTorchSafetyWrapper(config)
-        
-    def forward(self, x):
-        x = self.safety_wrapper.validate_input(x)
-        output = self.model(x)
-        output = self.safety_wrapper.validate_output(output)
-        return output
+config = {
+    "epochs": 5,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "hash_algorithm": "blake3",
+    "blockchain": {
+        "networks": ["ipfs", "ethereum"],
+        "ipfs": {"url": "http://localhost:5001"},
+        "ethereum": {
+            "rpc_url": "http://127.0.0.1:8545",
+            "private_key": "your_private_key"
+        }
+    }
+}
 ```
 
-**Integration Explanation:**
-- **`SafePyTorchModel`**: Wraps an existing PyTorch model with safety checks
-- **`forward`**: Overrides the forward method to add input/output validation
-- **`safety_wrapper`**: Handles all safety checks and provenance tracking
-- **Minimal Changes**: Only requires wrapping the model and adding validation calls
+## Security Considerations
 
-#### TensorFlow Integration
+### Private Key Management
+- Store private keys in environment variables
+- Use different keys for development and production
+- Implement proper access controls
 
-TensorFlow integration uses TensorFlow's graph execution and Keras model subclassing.
+### Network Security
+- Use HTTPS for RPC endpoints
+- Validate blockchain responses
+- Implement retry mechanisms with exponential backoff
 
-```python
-# TensorFlow Integration
-class SafeTensorFlowModel(tf.keras.Model):
-    def __init__(self, config):
-        super().__init__()
-        self.model = YourModel()
-        self.safety_wrapper = TensorFlowSafetyWrapper(config)
-        
-    def call(self, inputs, training=False):
-        inputs = self.safety_wrapper.validate_input(inputs)
-        outputs = self.model(inputs, training=training)
-        outputs = self.safety_wrapper.validate_output(outputs)
-        return outputs
+### Data Privacy
+- Only store hashes, not raw data
+- Consider metadata sensitivity
+- Implement access controls for blockchain data
+
+## Performance Considerations
+
+### Network Selection
+- **IPFS**: Fastest, no fees, good for development
+- **Ethereum**: Medium speed, gas fees, production-ready
+- **Bitcoin**: Slowest, low fees, maximum security
+
+### Optimization Strategies
+- Cache verification results
+- Batch operations when possible
+- Use appropriate gas limits for Ethereum
+- Implement connection pooling
+
+## Error Handling and Resilience
+
+### Network Failures
+- Automatic retry with exponential backoff
+- Fallback to local storage if blockchain unavailable
+- Graceful degradation of functionality
+
+### Data Integrity
+- Hash verification before and after storage
+- Cross-network verification
+- Comprehensive error reporting
+
+### Monitoring
+- Blockchain status monitoring
+- Transaction success tracking
+- Performance metrics collection
+
+## File Structure
+
+```
+src/ml_provenance/
+├── provenance/
+│   ├── blockchain.py          # Blockchain integration
+│   ├── tracker.py             # Main provenance tracker
+│   ├── merkle_tree.py         # Merkle tree implementation
+│   ├── verifier.py            # Verification system
+│   └── hash_config.py         # Hash algorithm configuration
+├── training/
+│   └── train.py               # Training with blockchain integration
+└── utils/
+    └── ...                    # Utility functions
+
+configs/
+├── blockchain_config.json     # Blockchain configuration
+└── training_config_*.json     # Training configurations
+
+scripts/
+├── setup_local_geth.sh        # Local Ethereum setup
+├── demo_blockchain_provenance.py  # Blockchain demo
+└── ...                        # Other utility scripts
 ```
 
-**Integration Explanation:**
-- **`SafeTensorFlowModel`**: Extends TensorFlow's Keras Model class
-- **`call`**: Overrides the call method to add safety validation
-- **`training` parameter**: Preserves TensorFlow's training mode functionality
-- **Graph Optimization**: Works with TensorFlow's graph compilation
+## Future Enhancements
 
-### API Integration
+### Planned Features
+- **Multi-signature support**: Require multiple signatures for critical operations
+- **Time-locked contracts**: Automatic verification at specific intervals
+- **Cross-chain verification**: Verify hashes across different blockchain networks
+- **Zero-knowledge proofs**: Privacy-preserving verification
+- **Automated compliance**: Regulatory compliance reporting
 
-The system provides RESTful APIs for integration with external systems and services.
+### Integration Opportunities
+- **CI/CD pipelines**: Automated blockchain verification in deployment
+- **Model registries**: Integration with ML model registries
+- **Audit systems**: Integration with external audit systems
+- **Legal frameworks**: Compliance with data governance regulations
 
-**API Features:**
-- **RESTful Design**: Standard HTTP methods and status codes
-- **JSON Payloads**: Structured data exchange
-- **Authentication**: Secure access control
-- **Documentation**: OpenAPI/Swagger documentation
+---
 
-```python
-# REST API
-@app.post("/train")
-async def train_model(request: TrainingRequest):
-    safety_system = ProvenanceSafetySystem(request.config)
-    model, report = safety_system.train_with_safety(
-        request.model, 
-        request.data, 
-        request.config
-    )
-    return TrainingResponse(model=model, report=report)
-
-@app.get("/verify/{model_id}")
-async def verify_model(model_id: str):
-    verifier = ProvenanceValidator()
-    result = verifier.validate_provenance(model_id)
-    return VerificationResponse(result=result)
-```
-
-**API Explanation:**
-- **`@app.post("/train")`**: HTTP POST endpoint for model training with safety checks
-- **`TrainingRequest`**: Structured request object containing model, data, and configuration
-- **`ProvenanceSafetySystem`**: Main system class that orchestrates training with safety
-- **`@app.get("/verify/{model_id}")`**: HTTP GET endpoint for model verification
-- **`ProvenanceValidator`**: Component that validates model provenance and integrity
-
-## Conclusion
-
-This architecture provides a comprehensive, production-ready system for ML provenance and safety. Key features include:
-
-- **Cryptographic Integrity**: Merkle tree-based verification
-- **Framework Agnostic**: Support for major ML frameworks
-- **Safety by Design**: Integrated safety mechanisms
-- **Regulatory Compliance**: Built-in compliance checking
-- **Production Ready**: Scalable and monitoring-enabled
-
-The system is designed for advanced AI/ML teams requiring enterprise-grade provenance tracking, safety validation, and regulatory compliance in production environments. 
+*This architecture provides a robust, scalable foundation for blockchain-enabled ML provenance tracking with support for multiple networks and comprehensive verification capabilities.* 

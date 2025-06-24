@@ -104,10 +104,18 @@ class ProvenanceVerifier:
             "metadata_verified": False
         }
         
-        # Verify hash if stored
-        if "hash" in data:
-            current_hash = self._generate_hash(data)
-            results["hash_match"] = current_hash == data["hash"]
+        # Verify hash against global hashes
+        if hasattr(self, 'global_hashes') and "data" in self.global_hashes:
+            # Reconstruct the exact data structure that the tracker hashed
+            # The tracker hashed a data_info structure with dataset, timestamp, train, and test
+            data_info = {
+                "dataset": data.get("dataset", "MNIST"),
+                "timestamp": data.get("timestamp", ""),
+                "train": data.get("train", {}),
+                "test": data.get("test", {})
+            }
+            current_hash = self._generate_hash(data_info)
+            results["hash_match"] = current_hash == self.global_hashes["data"]
         
         # Verify statistics if present
         if "statistics" in data:
@@ -138,10 +146,16 @@ class ProvenanceVerifier:
             "mismatched_epochs": []
         }
         
-        # Verify model hash if stored
-        if "hash" in model:
-            current_hash = self._generate_hash(model)
-            results["model_hash_match"] = current_hash == model["hash"]
+        # Verify model hash against global hashes
+        if hasattr(self, 'global_hashes') and "model" in self.global_hashes:
+            # Reconstruct the exact data structure that the tracker hashed
+            # The tracker hashed the model_info structure with architecture and timestamp
+            model_info = {
+                "architecture": model.get("architecture", {}),
+                "timestamp": model.get("timestamp", "")
+            }
+            current_hash = self._generate_hash(model_info)
+            results["model_hash_match"] = current_hash == self.global_hashes["model"]
         
         # Verify architecture if present
         if "architecture" in model:
@@ -180,10 +194,17 @@ class ProvenanceVerifier:
             "loss_present": "loss" in training.get("final_metrics", {})
         }
         
-        # Verify training hash if stored
-        if "hash" in training:
-            current_hash = self._generate_hash(training)
-            results["hash_match"] = current_hash == training["hash"]
+        # Verify training hash against global hashes
+        if hasattr(self, 'global_hashes') and "training" in self.global_hashes:
+            # Reconstruct the exact data structure that the tracker hashed
+            # The tracker hashed a structure with config, metrics, and privacy_metrics
+            training_info = {
+                "config": training.get("config", {}),
+                "metrics": training.get("final_metrics", {}),
+                "privacy_metrics": training.get("privacy_metrics", {})
+            }
+            current_hash = self._generate_hash(training_info)
+            results["hash_match"] = current_hash == self.global_hashes["training"]
         
         return results
     
@@ -198,8 +219,8 @@ class ProvenanceVerifier:
         
         Args:
             model_path: Path to the model file to verify
-            data_path: Path to the data provenance file
-            training_path: Path to the training provenance file
+            data_path: Path to the data provenance file (optional, will look for provenance_report.json)
+            training_path: Path to the training provenance file (optional, will look for provenance_report.json)
             
         Returns:
             Dictionary containing verification results
@@ -228,50 +249,80 @@ class ProvenanceVerifier:
                 "training": {}
             }
             
-            # Load provenance data from files
-            if data_path and data_path.exists():
-                try:
-                    with open(data_path, 'r') as f:
-                        self.provenance_data["data"] = json.load(f)
-                except Exception as e:
-                    logger.error(f"Error loading data provenance from {data_path}: {str(e)}")
-                    logger.error(f"Stack trace: {traceback.format_exc()}")
-                    
-            if model_path and model_path.exists():
-                # Look for provenance.json in the provenance directory
-                # The structure is: artifacts/models/<timestamp>/model.pth
-                # And we want: artifacts/provenance/<timestamp>/provenance.json
-                timestamp = model_path.parent.name
-                # Get the project root (artifacts directory's parent)
-                project_root = Path("/Users/mukeshjoshi/gitprojects/mnist_provenance")
-                provenance_dir = project_root / "artifacts" / "provenance" / timestamp
-                provenance_file = provenance_dir / "provenance.json"
-                
-                logger.info(f"Looking for provenance file at: {provenance_file}")
-                if provenance_file.exists():
+            # Try to load from single provenance_report.json file first
+            if self.provenance_dir:
+                provenance_report_file = self.provenance_dir / "provenance_report.json"
+                if provenance_report_file.exists():
                     try:
-                        with open(provenance_file, 'r') as f:
-                            provenance_data = json.load(f)
-                            if "model_provenance" in provenance_data:
-                                self.provenance_data["model"] = provenance_data["model_provenance"]
-                            else:
-                                logger.warning("No model_provenance found in provenance file")
+                        with open(provenance_report_file, 'r') as f:
+                            provenance_report = json.load(f)
+                            
+                        # Extract component data from the report
+                        if "data_provenance" in provenance_report:
+                            self.provenance_data["data"] = provenance_report["data_provenance"]
+                        if "model_provenance" in provenance_report:
+                            self.provenance_data["model"] = provenance_report["model_provenance"]
+                        if "training_provenance" in provenance_report:
+                            self.provenance_data["training"] = provenance_report["training_provenance"]
+                            
+                        # Store global hashes for verification
+                        self.global_hashes = provenance_report.get("hashes", {})
+                        
+                        # Configure hash function to match the one used during training
+                        if "merkle_tree" in provenance_report and "algorithm" in provenance_report["merkle_tree"]:
+                            hash_algorithm = provenance_report["merkle_tree"]["algorithm"]
+                            logger.info(f"Configuring verifier to use hash algorithm: {hash_algorithm}")
+                            HashFactory.initialize(hash_algorithm)
+                            # Update the hash function to use the correct algorithm
+                            self.hash_function = HashFactory.get_hash_function()
+                            
+                        logger.info("Loaded provenance data from provenance_report.json")
                     except Exception as e:
-                        logger.error(f"Error loading model provenance from {provenance_file}: {str(e)}")
+                        logger.error(f"Error loading provenance report from {provenance_report_file}: {str(e)}")
                         logger.error(f"Stack trace: {traceback.format_exc()}")
-                else:
-                    logger.warning(f"Provenance file not found at {provenance_file}")
-                    
-            if training_path and training_path.exists():
-                try:
-                    with open(training_path, 'r') as f:
-                        self.provenance_data["training"] = json.load(f)
-                except Exception as e:
-                    logger.error(f"Error loading training provenance from {training_path}: {str(e)}")
-                    logger.error(f"Stack trace: {traceback.format_exc()}")
             
-            # Verify model if path provided
-            if model_path and self.provenance_data["model"]:
+            # Fallback to individual files if single file approach failed
+            if not any(self.provenance_data.values()):
+                # Load provenance data from individual files
+                if data_path and data_path.exists():
+                    try:
+                        with open(data_path, 'r') as f:
+                            self.provenance_data["data"] = json.load(f)
+                    except Exception as e:
+                        logger.error(f"Error loading data provenance from {data_path}: {str(e)}")
+                        logger.error(f"Stack trace: {traceback.format_exc()}")
+                        
+                if model_path and model_path.exists():
+                    # Look for provenance.json in the same directory as the model
+                    # The structure is now: artifacts/provenance/<timestamp>/model.pth
+                    # And we want: artifacts/provenance/<timestamp>/provenance.json
+                    provenance_file = model_path.parent / "provenance.json"
+                    
+                    logger.info(f"Looking for provenance file at: {provenance_file}")
+                    if provenance_file.exists():
+                        try:
+                            with open(provenance_file, 'r') as f:
+                                provenance_data = json.load(f)
+                                if "model_provenance" in provenance_data:
+                                    self.provenance_data["model"] = provenance_data["model_provenance"]
+                                else:
+                                    logger.warning("No model_provenance found in provenance file")
+                        except Exception as e:
+                            logger.error(f"Error loading model provenance from {provenance_file}: {str(e)}")
+                            logger.error(f"Stack trace: {traceback.format_exc()}")
+                    else:
+                        logger.warning(f"Provenance file not found at {provenance_file}")
+                        
+                if training_path and training_path.exists():
+                    try:
+                        with open(training_path, 'r') as f:
+                            self.provenance_data["training"] = json.load(f)
+                    except Exception as e:
+                        logger.error(f"Error loading training provenance from {training_path}: {str(e)}")
+                        logger.error(f"Stack trace: {traceback.format_exc()}")
+            
+            # Verify model if data available
+            if self.provenance_data["model"]:
                 try:
                     model_report = self._verify_model(self.provenance_data["model"])
                     report["components"]["model"] = model_report
@@ -281,9 +332,11 @@ class ProvenanceVerifier:
                     logger.error(f"Error verifying model: {str(e)}")
                     logger.error(f"Stack trace: {traceback.format_exc()}")
                     report["components"]["model"] = {"error": str(e)}
+            else:
+                logger.warning("No model data available for verification")
             
-            # Verify data if path provided
-            if data_path and self.provenance_data["data"]:
+            # Verify data if data available
+            if self.provenance_data["data"]:
                 try:
                     data_report = self._verify_data(self.provenance_data["data"])
                     report["components"]["data"] = data_report
@@ -293,9 +346,11 @@ class ProvenanceVerifier:
                     logger.error(f"Error verifying data: {str(e)}")
                     logger.error(f"Stack trace: {traceback.format_exc()}")
                     report["components"]["data"] = {"error": str(e)}
+            else:
+                logger.warning("No data available for verification")
             
-            # Verify training if path provided
-            if training_path and self.provenance_data["training"]:
+            # Verify training if data available
+            if self.provenance_data["training"]:
                 try:
                     training_report = self._verify_training(self.provenance_data["training"])
                     report["components"]["training"] = training_report
@@ -305,6 +360,8 @@ class ProvenanceVerifier:
                     logger.error(f"Error verifying training: {str(e)}")
                     logger.error(f"Stack trace: {traceback.format_exc()}")
                     report["components"]["training"] = {"error": str(e)}
+            else:
+                logger.warning("No training data available for verification")
             
             # Verify Merkle tree if all components are present
             if all(comp in report["components"] for comp in ["model", "data", "training"]):
@@ -322,6 +379,10 @@ class ProvenanceVerifier:
                     logger.error(f"Stack trace: {traceback.format_exc()}")
                     report["merkle_tree"] = {"error": str(e)}
             
+            # Log what components were found
+            logger.info(f"Components loaded: {list(self.provenance_data.keys())}")
+            logger.info(f"Components verified: {list(report['components'].keys())}")
+            
             return report
             
         except Exception as e:
@@ -335,6 +396,101 @@ class ProvenanceVerifier:
             report["verification_status"] = "error"
             report["error"] = error_info
             return report
+
+    def verify_merkle_tree(
+        self,
+        model_path: Optional[Path] = None,
+        data_path: Optional[Path] = None,
+        training_path: Optional[Path] = None
+    ) -> Dict[str, Any]:
+        """
+        Verify the Merkle tree structure and root hash.
+        
+        Args:
+            model_path: Path to the model file
+            data_path: Path to the data file
+            training_path: Path to the training file
+            
+        Returns:
+            Dictionary containing Merkle tree verification results
+        """
+        try:
+            # Look for Merkle tree file in the provenance directory
+            merkle_files = list(self.provenance_dir.glob("merkle_tree_*.json"))
+            if not merkle_files:
+                return {
+                    "status": "not_found",
+                    "root_hash": None,
+                    "proofs": {},
+                    "is_valid": False,
+                    "error": "No Merkle tree files found"
+                }
+            
+            # Get the most recent Merkle tree file
+            latest_merkle_file = max(merkle_files, key=lambda x: x.stat().st_mtime)
+            
+            # Load the Merkle tree
+            with open(latest_merkle_file, 'r') as f:
+                merkle_data = json.load(f)
+            
+            # Extract root hash
+            root_hash = merkle_data.get("root", {}).get("hash")
+            if not root_hash:
+                return {
+                    "status": "invalid_structure",
+                    "root_hash": None,
+                    "proofs": {},
+                    "is_valid": False,
+                    "error": "No root hash found in Merkle tree"
+                }
+            
+            # Verify that the root hash matches what's in the provenance report
+            if self.provenance_dir:
+                provenance_report_file = self.provenance_dir / "provenance_report.json"
+                if provenance_report_file.exists():
+                    with open(provenance_report_file, 'r') as f:
+                        provenance_report = json.load(f)
+                    
+                    # Check if root hash matches
+                    report_root_hash = provenance_report.get("merkle_tree", {}).get("root_hash")
+                    if report_root_hash and report_root_hash == root_hash:
+                        return {
+                            "status": "verified",
+                            "root_hash": root_hash,
+                            "tree_file": latest_merkle_file.name,
+                            "proofs": merkle_data.get("proofs", {}),
+                            "is_valid": True
+                        }
+                    else:
+                        return {
+                            "status": "hash_mismatch",
+                            "root_hash": root_hash,
+                            "expected_hash": report_root_hash,
+                            "tree_file": latest_merkle_file.name,
+                            "proofs": {},
+                            "is_valid": False,
+                            "error": "Root hash mismatch"
+                        }
+            
+            # If we can't verify against report, just return the structure
+            return {
+                "status": "structure_verified",
+                "root_hash": root_hash,
+                "tree_file": latest_merkle_file.name,
+                "proofs": merkle_data.get("proofs", {}),
+                "is_valid": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error verifying Merkle tree: {str(e)}")
+            logger.error(f"Stack trace: {traceback.format_exc()}")
+            return {
+                "status": "error",
+                "root_hash": None,
+                "proofs": {},
+                "is_valid": False,
+                "error": str(e)
+            }
 
 class Verifier:
     """Verifier for ML provenance using consistent data structure."""

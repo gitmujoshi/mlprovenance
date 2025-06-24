@@ -1,1333 +1,469 @@
-# User Documentation
+# User Documentation: ML Provenance Tracking with Blockchain Integration
 
 ## Overview
 
-This document provides instructions for using the ML provenance tracking and safety features system.
+This user documentation provides a comprehensive guide for using the ML provenance tracking system with blockchain integration. The system provides immutable, tamper-evident audit trails for machine learning training processes.
 
-[Source: `safety_features/app/app.py`]
+## Quick Start
 
-## 1. Getting Started
+### 1. Installation
 
-### 1.1 Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/mnist_provenance.git
-   cd mnist_provenance
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-[Source: `requirements.txt`]
-
-### 1.2 Configuration
-
-1. Set up the provenance directory:
-   ```bash
-   mkdir -p artifacts/provenance
-   ```
-
-2. Configure safety features:
-   ```bash
-   cp safety_features/app/config.example.py safety_features/app/config.py
-   ```
-
-3. Edit the configuration file to set your preferences:
-   ```python
-   # safety_features/app/config.py
-   SAFETY_CONFIG = {
-       "content_filters": [
-           "profanity",
-           "sensitive_topics",
-           "age_rating"
-       ],
-       "min_pass_rate": 0.95,
-       "max_content_warnings": 100
-   }
-   ```
-
-[Source: `safety_features/app/config.py`]
-
-## 2. Using the Web Interface
-
-### 2.1 Starting the Application
-
-1. Start the Flask application:
-   ```bash
-   python safety_features/scripts/run_app.py
-   ```
-
-2. Open your web browser and navigate to:
-   ```
-   http://localhost:5001
-   ```
-
-[Source: `safety_features/scripts/run_app.py`]
-
-### 2.2 Generating Text
-
-1. Enter your prompt in the text input field
-2. Click "Generate" to create text
-3. The system will:
-   - Check the input for safety violations
-   - Generate text using the model
-   - Verify the output against safety rules
-   - Display the result with safety metrics
-
-[Source: `safety_features/app/templates/index.html`]
-
-### 2.3 Viewing Safety Metrics
-
-1. Click on "Safety Metrics" in the navigation bar
-2. View:
-   - Content warning statistics
-   - Safety check pass rates
-   - Recent violations
-   - Model safety status
-
-[Source: `safety_features/app/templates/safety_metrics.html`]
-
-## 3. Training Models with Safety Features
-
-### 3.1 Basic Training Setup
-
-1. Create a training configuration file (e.g., `train_config.py`):
-   ```python
-   TRAINING_CONFIG = {
-       "model": {
-           "type": "transformer",  # or "cnn", "rnn", "custom"
-           "architecture": "bert-base-uncased",  # model identifier or path
-           "custom_config": {}  # optional custom model configuration
-       },
-       "training": {
-           "epochs": 3,
-           "batch_size": 32,
-           "learning_rate": 1e-4,
-           "optimizer": "adam",
-           "scheduler": "cosine"
-       },
-       "safety": {
-           "enabled": True,
-           "config_path": "safety_features/app/config.py"
-       },
-       "hash_algorithm": "sha256",  # Can be: sha256, blake3, sha512, sha1, md5
-       "provenance": {
-           "enabled": True,
-           "track_data": True,
-           "track_model": True,
-           "track_training": True
-       }
-   }
-   ```
-
-2. Run training with safety features:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name <your_model_name> \
-       --config_path train_config.py \
-       --safety_config safety_features/app/config.py
-   ```
-
-### 3.2 Hash Algorithm Configuration
-
-The system supports multiple hash algorithms for provenance tracking. You can configure the hash algorithm in your training configuration:
-
-#### 3.2.1 Supported Hash Algorithms
-
-1. **SHA-256** (Default)
-   - **Security**: High
-   - **Speed**: Medium
-   - **Digest Size**: 32 bytes
-   - **Use Case**: General purpose, widely trusted
-   ```json
-   {
-       "hash_algorithm": "sha256"
-   }
-   ```
-
-2. **BLAKE3**
-   - **Security**: High
-   - **Speed**: Very Fast
-   - **Digest Size**: 32 bytes
-   - **Use Case**: High-performance applications
-   ```json
-   {
-       "hash_algorithm": "blake3"
-   }
-   ```
-
-3. **SHA-512**
-   - **Security**: Very High
-   - **Speed**: Slow
-   - **Digest Size**: 64 bytes
-   - **Use Case**: Maximum security requirements
-   ```json
-   {
-       "hash_algorithm": "sha512"
-   }
-   ```
-
-4. **SHA-1** (Legacy)
-   - **Security**: Broken (not recommended)
-   - **Speed**: Fast
-   - **Digest Size**: 20 bytes
-   - **Use Case**: Legacy compatibility only
-   ```json
-   {
-       "hash_algorithm": "sha1"
-   }
-   ```
-
-5. **MD5** (Legacy)
-   - **Security**: Broken (not recommended)
-   - **Speed**: Very Fast
-   - **Digest Size**: 16 bytes
-   - **Use Case**: Legacy compatibility only
-   ```json
-   {
-       "hash_algorithm": "md5"
-   }
-   ```
-
-#### 3.2.2 Configuration Examples
-
-**High-Performance Training (BLAKE3):**
-```json
-{
-    "model": {
-        "type": "transformer",
-        "architecture": "bert-base-uncased"
-    },
-    "training": {
-        "epochs": 3,
-        "batch_size": 32,
-        "learning_rate": 1e-4
-    },
-    "hash_algorithm": "blake3",
-    "safety": {
-        "enabled": true
-    }
-}
-```
-
-**Maximum Security Training (SHA-512):**
-```json
-{
-    "model": {
-        "type": "transformer",
-        "architecture": "bert-base-uncased"
-    },
-    "training": {
-        "epochs": 3,
-        "batch_size": 32,
-        "learning_rate": 1e-4
-    },
-    "hash_algorithm": "sha512",
-    "safety": {
-        "enabled": true
-    }
-}
-```
-
-**Standard Training (SHA-256):**
-```json
-{
-    "model": {
-        "type": "transformer",
-        "architecture": "bert-base-uncased"
-    },
-    "training": {
-        "epochs": 3,
-        "batch_size": 32,
-        "learning_rate": 1e-4
-    },
-    "hash_algorithm": "sha256",
-    "safety": {
-        "enabled": true
-    }
-}
-```
-
-#### 3.2.3 Hash Algorithm Selection Guidelines
-
-**Choose SHA-256 when:**
-- You need a balance of security and performance
-- Working with standard ML workloads
-- Compatibility with existing systems is important
-
-**Choose BLAKE3 when:**
-- Performance is critical (large datasets, frequent hashing)
-- You want maximum speed without compromising security
-- Working with real-time applications
-
-**Choose SHA-512 when:**
-- Maximum security is required
-- Working with sensitive data or compliance requirements
-- Future-proofing against quantum attacks
-
-**Avoid SHA-1 and MD5 when:**
-- Security is important (they are cryptographically broken)
-- Working with production systems
-- Compliance requirements mandate secure hashing
-
-### 3.3 Framework-Specific Training
-
-#### 3.3.1 PyTorch Training
-
-1. Create a PyTorch model with safety features:
-   ```python
-   import torch
-   import torch.nn as nn
-   from safety_features.frameworks.pytorch import PyTorchSafetyWrapper
-
-   class SafePyTorchModel(nn.Module):
-       def __init__(self, config):
-           super().__init__()
-           self.model = YourPyTorchModel()
-           self.safety_wrapper = PyTorchSafetyWrapper(config)
-           
-       def forward(self, x):
-           # Safety checks before forward pass
-           x = self.safety_wrapper.validate_input(x)
-           
-           # Regular forward pass
-           output = self.model(x)
-           
-           # Safety checks after forward pass
-           output = self.safety_wrapper.validate_output(output)
-           return output
-   ```
-
-2. Configure PyTorch training:
-   ```python
-   pytorch_config = {
-       "framework": "pytorch",
-       "safety": {
-           "enabled": True,
-           "checks": {
-               "input_validation": True,
-               "output_validation": True,
-               "gradient_clipping": True
-           },
-           "metrics": {
-               "track_gradients": True,
-               "track_activations": True
-           }
-       },
-       "training": {
-           "safety_weight": 0.1,
-           "gradient_clip_val": 1.0
-       }
-   }
-   ```
-
-3. Run PyTorch training:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name SafePyTorchModel \
-       --config_path pytorch_config.py \
-       --framework pytorch
-   ```
-
-#### 3.3.2 TensorFlow Training
-
-1. Create a TensorFlow model with safety features:
-   ```python
-   import tensorflow as tf
-   from safety_features.frameworks.tensorflow import TensorFlowSafetyWrapper
-
-   class SafeTensorFlowModel(tf.keras.Model):
-       def __init__(self, config):
-           super().__init__()
-           self.model = YourTensorFlowModel()
-           self.safety_wrapper = TensorFlowSafetyWrapper(config)
-           
-       def call(self, inputs, training=False):
-           # Safety checks before forward pass
-           inputs = self.safety_wrapper.validate_input(inputs)
-           
-           # Regular forward pass
-           outputs = self.model(inputs, training=training)
-           
-           # Safety checks after forward pass
-           outputs = self.safety_wrapper.validate_output(outputs)
-           return outputs
-   ```
-
-2. Configure TensorFlow training:
-   ```python
-   tensorflow_config = {
-       "framework": "tensorflow",
-       "safety": {
-           "enabled": True,
-           "checks": {
-               "input_validation": True,
-               "output_validation": True,
-               "gradient_clipping": True
-           },
-           "metrics": {
-               "track_gradients": True,
-               "track_activations": True
-           }
-       },
-       "training": {
-           "safety_weight": 0.1,
-           "gradient_clip_norm": 1.0
-       }
-   }
-   ```
-
-3. Run TensorFlow training:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name SafeTensorFlowModel \
-       --config_path tensorflow_config.py \
-       --framework tensorflow
-   ```
-
-#### 3.3.3 JAX Training
-
-1. Create a JAX model with safety features:
-   ```python
-   import jax
-   import flax.linen as nn
-   from safety_features.frameworks.jax import JAXSafetyWrapper
-
-   class SafeJAXModel(nn.Module):
-       def __init__(self, config):
-           super().__init__()
-           self.model = YourJAXModel()
-           self.safety_wrapper = JAXSafetyWrapper(config)
-           
-       def __call__(self, x, training=False):
-           # Safety checks before forward pass
-           x = self.safety_wrapper.validate_input(x)
-           
-           # Regular forward pass
-           output = self.model(x, training=training)
-           
-           # Safety checks after forward pass
-           output = self.safety_wrapper.validate_output(output)
-           return output
-   ```
-
-2. Configure JAX training:
-   ```python
-   jax_config = {
-       "framework": "jax",
-       "safety": {
-           "enabled": True,
-           "checks": {
-               "input_validation": True,
-               "output_validation": True,
-               "gradient_clipping": True
-           },
-           "metrics": {
-               "track_gradients": True,
-               "track_activations": True
-           }
-       },
-       "training": {
-           "safety_weight": 0.1,
-           "gradient_clip_norm": 1.0
-       }
-   }
-   ```
-
-3. Run JAX training:
-   ```bash
-   python safety_features/scripts/train_model_with_safety.py \
-       --model_name SafeJAXModel \
-       --config_path jax_config.py \
-       --framework jax
-   ```
-
-### 3.4 Monitoring Training Progress
-
-1. View safety metrics during training:
-   ```bash
-   python safety_features/scripts/monitor_training.py \
-       --run_id <training_run_id> \
-       --metrics all
-   ```
-
-2. Access the safety dashboard:
-   ```bash
-   python safety_features/scripts/run_dashboard.py
-   ```
-   Then open your browser to `http://localhost:5001`
-
-3. Export training reports:
-   ```bash
-   python safety_features/scripts/generate_training_report.py \
-       --run_id <training_run_id> \
-       --output_path reports/
-   ```
-
-## 4. Safety Features
-
-### 4.1 Content Filtering
-
-The system implements several content filters:
-
-1. **Profanity Filter**
-   - Checks for inappropriate language
-   - Configurable word lists
-   - Context-aware filtering
-
-2. **Sensitive Topics**
-   - Identifies potentially sensitive content
-   - Age-appropriate filtering
-   - Customizable topic lists
-
-3. **Age Rating**
-   - Assigns age ratings to content
-   - Enforces age restrictions
-   - Configurable rating levels
-
-[Source: `safety_features/app/safety/filters.py`]
-
-### 4.2 Safety Metrics
-
-The system tracks various safety metrics:
-
-1. **Content Warnings**
-   - Number of warnings generated
-   - Types of violations
-   - Warning severity levels
-
-2. **Safety Check Results**
-   - Pass/fail rates
-   - Check types
-   - Historical trends
-
-3. **Model Safety Status**
-   - Overall safety score
-   - Compliance status
-   - Safety thresholds
-
-[Source: `safety_features/app/safety/metrics.py`]
-
-## 5. Provenance Tracking
-
-### 5.1 Viewing Provenance Data
-
-1. Navigate to the provenance directory:
-   ```bash
-   cd artifacts/provenance
-   ```
-
-2. View the latest run:
-   ```bash
-   ls -l run_*/provenance_report_*.json
-   ```
-
-3. Examine the report:
-   ```bash
-   cat run_*/provenance_report_*.json | jq
-   ```
-
-[Source: `artifacts/provenance/run_20250615_153833/provenance_report_20250615_153901.json`]
-
-### 5.2 Verifying Model Integrity
-
-1. Generate a verification report:
-   ```bash
-   python scripts/generate_training_report.py
-   ```
-
-2. Check the report at:
-   ```
-   docs/training_run_report.md
-   ```
-
-[Source: `scripts/generate_training_report.py`]
-
-## 6. Troubleshooting
-
-### 6.1 Common Issues
-
-1. **Port Already in Use**
-   - Error: "Address already in use"
-   - Solution: Change the port in `safety_features/scripts/run_app.py`
-   - Alternative: Disable AirPlay Receiver on macOS
-
-2. **Model Loading Errors**
-   - Error: "Failed to load model"
-   - Solution: Check model path and file permissions
-   - Verify model file integrity
-
-3. **Safety Check Failures**
-   - Error: "Safety check failed"
-   - Solution: Review safety configuration
-   - Check input content
-
-[Source: `safety_features/app/errors.py`]
-
-### 6.2 Getting Help
-
-1. Check the logs:
-   ```bash
-   tail -f safety_features/app/logs/app.log
-   ```
-
-2. Review error messages in the web interface
-
-3. Contact support with:
-   - Error messages
-   - Log files
-   - System information
-
-[Source: `safety_features/app/logger.py`]
-
-## 7. Best Practices
-
-### 7.1 Safety Guidelines
-
-1. **Content Generation**
-   - Review generated content
-   - Monitor safety metrics
-   - Report violations
-
-2. **Model Usage**
-   - Verify model provenance
-   - Check safety status
-   - Update regularly
-
-3. **Configuration**
-   - Regular safety updates
-   - Monitor thresholds
-   - Backup settings
-
-[Source: `safety_features/app/config.py`]
-
-### 7.2 Maintenance
-
-1. **Regular Updates**
-   - Update dependencies
-   - Check for new safety rules
-   - Verify model integrity
-
-2. **Backup**
-   - Backup configuration
-   - Save provenance data
-   - Archive safety reports
-
-3. **Monitoring**
-   - Check safety metrics
-   - Review error logs
-   - Update documentation
-
-[Source: `safety_features/scripts/maintenance.py`]
-
-## 1. User Guides
-
-### 1.1 Getting Started
-
-#### 1.1.1 Installation
 ```bash
-# Install the ML Provenance package
-pip install ml-provenance
-
-# Initialize the system
-ml-provenance init
+git clone <repository-url>
+cd mnist_provenance
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-#### 1.1.2 Basic Usage
-```python
-# Basic tracking example
-from ml_provenance import ProvenanceTracker
+### 2. Start Local Blockchain (Optional)
 
-# Initialize tracker
-tracker = ProvenanceTracker()
+```bash
+# Start local Geth node for Ethereum development
+bash scripts/setup_local_geth.sh
 
-# Track data
-with tracker.track_data():
-    data = load_dataset()
-    tracker.log_data(data)
-
-# Track model
-with tracker.track_model():
-    model = train_model()
-    tracker.log_model(model)
+# Or use IPFS only (default)
+# No additional setup required
 ```
 
-### 1.2 Advanced Usage
+### 3. Run Demo
 
-#### 1.2.1 Custom Tracking
-```python
-# Custom tracking example
-from ml_provenance import ProvenanceTracker
+```bash
+python3 scripts/demo_blockchain_provenance.py
+```
 
-tracker = ProvenanceTracker()
+### 4. Run Training
 
-# Custom metadata
-metadata = {
-    'project': 'my_project',
-    'version': '1.0.0',
-    'description': 'Custom tracking example'
+```bash
+python3 src/ml_provenance/training/train.py
+```
+
+## Features
+
+### 🔗 Multi-Blockchain Support
+- **IPFS**: Decentralized storage for development and testing
+- **Ethereum**: Smart contract platform for production use
+- **Bitcoin**: Maximum security for long-term storage
+
+### 📊 Merkle Tree Integration
+- Cryptographic verification of ML pipeline
+- Tamper-evident audit trails
+- Efficient proof generation and verification
+
+### 🔒 Immutable Provenance
+- Blockchain-based hash storage
+- Timestamp verification
+- Cross-network validation
+
+### ⚡ Auto Mode
+- Fully automated blockchain integration
+- No manual intervention required
+- Graceful fallback to local storage
+
+## Configuration
+
+### Blockchain Configuration
+
+Create `configs/blockchain_config.json`:
+
+```json
+{
+  "blockchain": {
+    "enabled": true,
+    "networks": ["ipfs", "ethereum"],
+    "ipfs": {
+      "enabled": true,
+      "url": "http://localhost:5001",
+      "timeout": 30,
+      "retry_attempts": 3
+    },
+    "ethereum": {
+      "enabled": true,
+      "rpc_url": "http://127.0.0.1:8545",
+      "private_key": "your_private_key_here",
+      "contract_address": null,
+      "gas_limit": 300000,
+      "gas_price": "auto"
+    },
+    "storage_options": {
+      "store_before_training": true,
+      "store_after_training": true,
+      "store_epoch_checkpoints": false
+    }
+  }
 }
-
-# Track with custom metadata
-with tracker.track_experiment(metadata=metadata):
-    # Your ML workflow here
-    pass
 ```
 
-## 2. Best Practices
-
-### 2.1 Data Management
-- Use consistent naming conventions
-- Document data preprocessing steps
-- Maintain data versioning
-- Regular data validation
-
-### 2.2 Model Management
-- Version all model changes
-- Document model architecture
-- Track hyperparameters
-- Monitor model performance
-
-### 2.3 Experiment Management
-- Use descriptive experiment names
-- Document experiment configurations
-- Track all dependencies
-- Regular experiment cleanup
-
-### 2.4 Security Practices
-- Secure API keys
-- Regular access review
-- Data encryption
-- Audit logging
-
-## 3. Troubleshooting Guides
-
-### 3.1 Common Issues
-
-#### 3.1.1 Installation Issues
-- **Problem**: Package installation fails
-- **Solution**: 
-  1. Check Python version compatibility
-  2. Verify pip installation
-  3. Check system dependencies
-
-#### 3.1.2 Connection Issues
-- **Problem**: Cannot connect to tracking server
-- **Solution**:
-  1. Verify network connectivity
-  2. Check server status
-  3. Validate credentials
-
-#### 3.1.3 Performance Issues
-- **Problem**: Slow tracking operations
-- **Solution**:
-  1. Check system resources
-  2. Optimize batch operations
-  3. Review storage configuration
-
-### 3.2 Error Messages
-
-#### 3.2.1 Common Error Codes
-- E001: Authentication failed
-- E002: Invalid data format
-- E003: Storage quota exceeded
-- E004: Version conflict
-
-#### 3.2.2 Resolution Steps
-1. Check error message details
-2. Review system logs
-3. Verify configuration
-4. Contact support if needed
-
-### 3.3 Performance Optimization
-
-#### 3.3.1 System Tuning
-- Optimize batch sizes
-- Configure caching
-- Adjust storage settings
-- Monitor resource usage
-
-#### 3.3.2 Best Practices
-- Regular system maintenance
-- Performance monitoring
-- Resource optimization
-- Regular updates 
-
-## When Should You Run the Verifier?
-
-The verifier is a tool that checks the integrity and authenticity of your data, model, and training process. Here are the main situations when you should use it:
-
-1. **Before Deploying a Model**
-   - Make sure your model and data haven't been tampered with before going live.
-
-2. **During Audits or Compliance Checks**
-   - Prove to auditors or regulators that your model's history and data are trustworthy.
-
-3. **After Training a Model**
-   - Confirm that your training process was correct and can be reproduced.
-
-4. **When Sharing or Transferring Models**
-   - Let others verify that the model and its history are authentic and unchanged.
-
-5. **Before or After Model Updates/Retraining**
-   - Ensure that updates or retraining haven't broken the chain of trust.
-
-6. **When Investigating Issues or Anomalies**
-   - Check for unauthorized changes or data corruption if something goes wrong.
-
-**Summary Table:**
-
-| When to Run Verifier         | Why/Goal                                      |
-|-----------------------------|------------------------------------------------|
-| Before deployment           | Ensure integrity before production use         |
-| During audits/compliance    | Satisfy regulatory or internal requirements    |
-| After training              | Confirm reproducibility and correctness        |
-| When sharing/transferring   | Build trust and transparency                   |
-| Before/after updates        | Maintain chain of trust across versions        |
-| During incident investigation| Detect tampering or corruption                |
-
-**In short:**
-Run the verifier whenever you need to check or prove the trustworthiness of your ML pipeline, especially before deployment, during audits, or when sharing models. 
-
-#### 3.1.14 Additional Model-Specific Examples
-
-##### A. Vision Transformer (ViT) Safety Implementation
-```python
-class ViTSafetyWrapper(BaseModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.model = ViTModel.from_pretrained(config.model.architecture)
-        self.patch_size = config.model.patch_size
-        
-    def get_safety_features(self):
-        return {
-            'patch_safety': self.analyze_patches(),
-            'spatial_attention': self.analyze_spatial_attention(),
-            'image_quality': self.check_image_quality()
-        }
-        
-    def analyze_patches(self):
-        """Analyze image patches for safety"""
-        return {
-            'patch_entropy': self.compute_patch_entropy(),
-            'patch_correlation': self.analyze_patch_correlation(),
-            'patch_anomalies': self.detect_patch_anomalies()
-        }
-        
-    def analyze_spatial_attention(self):
-        """Analyze spatial attention patterns"""
-        return {
-            'attention_maps': self.generate_attention_maps(),
-            'spatial_bias': self.detect_spatial_bias(),
-            'region_importance': self.analyze_region_importance()
-        }
-```
-
-##### B. Graph Neural Network (GNN) Safety Implementation
-```python
-class GNNSafetyWrapper(BaseModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.model = GNNModel(config)
-        
-    def get_safety_features(self):
-        return {
-            'graph_safety': self.analyze_graph_structure(),
-            'node_safety': self.analyze_node_features(),
-            'edge_safety': self.analyze_edge_weights()
-        }
-        
-    def analyze_graph_structure(self):
-        """Analyze graph structure for safety"""
-        return {
-            'connectivity': self.check_connectivity(),
-            'subgraph_patterns': self.analyze_subgraphs(),
-            'graph_robustness': self.check_graph_robustness()
-        }
-```
-
-##### C. Reinforcement Learning Safety Implementation
-```python
-class RLSafetyWrapper(BaseModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.model = RLModel(config)
-        
-    def get_safety_features(self):
-        return {
-            'action_safety': self.analyze_actions(),
-            'state_safety': self.analyze_states(),
-            'reward_safety': self.analyze_rewards()
-        }
-        
-    def analyze_actions(self):
-        """Analyze actions for safety"""
-        return {
-            'action_distribution': self.check_action_distribution(),
-            'action_constraints': self.verify_action_constraints(),
-            'action_impact': self.assess_action_impact()
-        }
-```
-
-#### 3.1.15 Advanced Safety Metrics
-
-##### A. Fairness Metrics
-```python
-class FairnessMetrics(BaseSafetyMetric):
-    def compute(self, model_output, sensitive_attributes):
-        """Compute fairness metrics"""
-        return {
-            'demographic_parity': self.compute_demographic_parity(
-                model_output, sensitive_attributes),
-            'equal_opportunity': self.compute_equal_opportunity(
-                model_output, sensitive_attributes),
-            'equalized_odds': self.compute_equalized_odds(
-                model_output, sensitive_attributes)
-        }
-        
-    def compute_demographic_parity(self, output, attributes):
-        """Compute demographic parity score"""
-        return {
-            'score': self._calculate_parity_score(output, attributes),
-            'bias_metrics': self._compute_bias_metrics(output, attributes)
-        }
-```
-
-##### B. Robustness Metrics
-```python
-class RobustnessMetrics(BaseSafetyMetric):
-    def compute(self, model_output, perturbations):
-        """Compute robustness metrics"""
-        return {
-            'adversarial_robustness': self.check_adversarial_robustness(
-                model_output, perturbations),
-            'distribution_shift': self.analyze_distribution_shift(
-                model_output),
-            'uncertainty_metrics': self.compute_uncertainty(
-                model_output)
-        }
-        
-    def check_adversarial_robustness(self, output, perturbations):
-        """Check model robustness to adversarial attacks"""
-        return {
-            'attack_success_rate': self._compute_attack_success(output, perturbations),
-            'robustness_score': self._calculate_robustness_score(output, perturbations)
-        }
-```
-
-##### C. Privacy Metrics
-```python
-class PrivacyMetrics(BaseSafetyMetric):
-    def compute(self, model_output, training_data):
-        """Compute privacy metrics"""
-        return {
-            'membership_inference': self.check_membership_inference(
-                model_output, training_data),
-            'data_leakage': self.analyze_data_leakage(
-                model_output),
-            'privacy_score': self.compute_privacy_score(
-                model_output)
-        }
-```
-
-#### 3.1.16 Detailed Dashboard Visualizations
-
-##### A. Real-time Monitoring Dashboard
-```python
-class SafetyDashboard:
-    def __init__(self, config):
-        self.config = config
-        self.metrics = {}
-        self.alerts = []
-        
-    def update_metrics(self, new_metrics):
-        """Update dashboard metrics"""
-        self.metrics.update(new_metrics)
-        self._check_alerts()
-        self._update_visualizations()
-        
-    def _update_visualizations(self):
-        """Update dashboard visualizations"""
-        self._update_metric_charts()
-        self._update_alert_panel()
-        self._update_performance_graphs()
-        
-    def _update_metric_charts(self):
-        """Update metric visualization charts"""
-        charts = {
-            'safety_scores': self._create_safety_score_chart(),
-            'violation_trends': self._create_violation_trend_chart(),
-            'performance_impact': self._create_performance_chart()
-        }
-        return charts
-```
-
-##### B. Historical Analysis Dashboard
-```python
-class HistoricalAnalysisDashboard:
-    def __init__(self, config):
-        self.config = config
-        self.history = {}
-        
-    def analyze_history(self, time_range):
-        """Analyze historical safety data"""
-        return {
-            'trend_analysis': self._analyze_trends(time_range),
-            'violation_patterns': self._analyze_violations(time_range),
-            'performance_evolution': self._analyze_performance(time_range)
-        }
-        
-    def _analyze_trends(self, time_range):
-        """Analyze safety metric trends"""
-        return {
-            'metric_trends': self._compute_metric_trends(time_range),
-            'correlation_analysis': self._analyze_correlations(time_range),
-            'anomaly_detection': self._detect_anomalies(time_range)
-        }
-```
-
-##### C. Custom Visualization Dashboard
-```python
-class CustomVisualizationDashboard:
-    def __init__(self, config):
-        self.config = config
-        self.custom_charts = {}
-        
-    def create_custom_chart(self, chart_config):
-        """Create custom visualization chart"""
-        return {
-            'chart_type': self._determine_chart_type(chart_config),
-            'data_processing': self._process_chart_data(chart_config),
-            'visualization': self._create_visualization(chart_config)
-        }
-        
-    def _create_visualization(self, config):
-        """Create custom visualization"""
-        return {
-            'plot': self._generate_plot(config),
-            'interactivity': self._add_interactivity(config),
-            'export_options': self._configure_export(config)
-        }
-```
-
-#### 3.1.17 Example Dashboard Configuration
+### Training Configuration
 
 ```python
-dashboard_config = {
-    "real_time_monitoring": {
-        "enabled": True,
-        "update_frequency": "1s",
-        "metrics": {
-            "safety_scores": {
-                "type": "line_chart",
-                "refresh_rate": "5s",
-                "alerts": {
-                    "threshold": 0.8,
-                    "notification": "email"
-                }
-            },
-            "violation_trends": {
-                "type": "bar_chart",
-                "refresh_rate": "1m",
-                "categories": ["input", "output", "training"]
-            }
-        }
-    },
-    "historical_analysis": {
-        "enabled": True,
-        "time_ranges": ["1d", "1w", "1m", "1y"],
-        "analysis_types": {
-            "trend_analysis": True,
-            "violation_patterns": True,
-            "performance_evolution": True
-        }
-    },
-    "custom_visualizations": {
-        "enabled": True,
-        "charts": {
-            "safety_heatmap": {
-                "type": "heatmap",
-                "data_source": "safety_metrics",
-                "update_frequency": "5m"
-            },
-            "violation_correlation": {
-                "type": "scatter_plot",
-                "data_source": "violation_data",
-                "update_frequency": "1h"
-            }
+config = {
+    "epochs": 5,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "hash_algorithm": "blake3",
+    "blockchain": {
+        "networks": ["ipfs", "ethereum"],
+        "ipfs": {"url": "http://localhost:5001"},
+        "ethereum": {
+            "rpc_url": "http://127.0.0.1:8545",
+            "private_key": "your_private_key"
         }
     }
 }
 ```
 
-[Source: `safety_features/dashboard/config.py`]
+## Usage Examples
 
-#### 3.1.18 Framework-Specific Integration
+### Basic Usage
 
-##### A. PyTorch Integration
-
-###### 1. Basic PyTorch Model with Safety
 ```python
-import torch
-import torch.nn as nn
-from safety_features.frameworks.pytorch import PyTorchSafetyWrapper
+from ml_provenance.provenance.tracker import ProvenanceTracker
+import json
 
-class SafePyTorchModel(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.model = YourPyTorchModel()
-        self.safety_wrapper = PyTorchSafetyWrapper(config)
-        
-    def forward(self, x):
-        # Safety checks before forward pass
-        x = self.safety_wrapper.validate_input(x)
-        
-        # Regular forward pass
-        output = self.model(x)
-        
-        # Safety checks after forward pass
-        output = self.safety_wrapper.validate_output(output)
-        return output
-        
-    def get_safety_metrics(self):
-        return self.safety_wrapper.get_metrics()
+# Load configuration
+with open('configs/blockchain_config.json', 'r') as f:
+    config = json.load(f)
+
+# Initialize tracker with blockchain support
+provenance_tracker = ProvenanceTracker(config=config)
+
+# Track data and model
+provenance_tracker.track_data(train_data, test_data)
+provenance_tracker.track_model(model)
+
+# Store pre-training hash on blockchain
+training_config = {"epochs": 5, "batch_size": 32}
+before_transactions = provenance_tracker.store_merkle_on_blockchain_before_training(training_config)
+
+# ... training process ...
+
+# Store post-training hash on blockchain
+training_results = {"accuracy": 0.95, "loss": 0.1}
+after_transactions = provenance_tracker.store_merkle_on_blockchain_after_training(training_results)
+
+# Verify blockchain provenance
+verification_results = provenance_tracker.verify_blockchain_provenance()
+
+# Save reports
+provenance_tracker.save_blockchain_report()
+provenance_tracker.save()
 ```
 
-###### 2. PyTorch Training Loop with Safety
+### Advanced Usage
+
 ```python
-from safety_features.frameworks.pytorch import PyTorchSafetyTrainer
+# Get blockchain status
+status = provenance_tracker.get_blockchain_status()
+print(f"Blockchain enabled: {status['blockchain_enabled']}")
+print(f"Stored hashes: {status['stored_hashes']}")
 
-class SafePyTorchTrainer(PyTorchSafetyTrainer):
-    def __init__(self, model, config):
-        super().__init__(model, config)
-        self.safety_metrics = {}
-        
-    def training_step(self, batch, batch_idx):
-        # Safety checks on batch
-        batch = self.validate_batch(batch)
-        
-        # Forward pass with safety
-        output = self.model(batch)
-        
-        # Compute loss with safety penalty
-        loss = self.compute_loss(output, batch)
-        safety_penalty = self.compute_safety_penalty(output)
-        total_loss = loss + self.config.safety_weight * safety_penalty
-        
-        # Update safety metrics
-        self.update_safety_metrics(output)
-        
-        return total_loss
-        
-    def compute_safety_penalty(self, output):
-        """Compute safety violation penalty"""
-        return self.model.safety_wrapper.compute_penalty(output)
-```
+# Verify specific networks
+verification = provenance_tracker.verify_blockchain_provenance()
+if verification['chain_integrity']:
+    print("✅ Provenance chain integrity verified!")
+else:
+    print("❌ Provenance chain integrity failed!")
 
-##### B. TensorFlow Integration
-
-###### 1. Basic TensorFlow Model with Safety
-```python
-import tensorflow as tf
-from safety_features.frameworks.tensorflow import TensorFlowSafetyWrapper
-
-class SafeTensorFlowModel(tf.keras.Model):
-    def __init__(self, config):
-        super().__init__()
-        self.model = YourTensorFlowModel()
-        self.safety_wrapper = TensorFlowSafetyWrapper(config)
-        
-    def call(self, inputs, training=False):
-        # Safety checks before forward pass
-        inputs = self.safety_wrapper.validate_input(inputs)
-        
-        # Regular forward pass
-        outputs = self.model(inputs, training=training)
-        
-        # Safety checks after forward pass
-        outputs = self.safety_wrapper.validate_output(outputs)
-        return outputs
-        
-    def get_safety_metrics(self):
-        return self.safety_wrapper.get_metrics()
-```
-
-###### 2. TensorFlow Training with Safety
-```python
-from safety_features.frameworks.tensorflow import TensorFlowSafetyTrainer
-
-class SafeTensorFlowTrainer(TensorFlowSafetyTrainer):
-    def __init__(self, model, config):
-        super().__init__(model, config)
-        self.safety_metrics = {}
-        
-    @tf.function
-    def train_step(self, batch):
-        with tf.GradientTape() as tape:
-            # Safety checks on batch
-            batch = self.validate_batch(batch)
-            
-            # Forward pass with safety
-            output = self.model(batch, training=True)
-            
-            # Compute loss with safety penalty
-            loss = self.compute_loss(output, batch)
-            safety_penalty = self.compute_safety_penalty(output)
-            total_loss = loss + self.config.safety_weight * safety_penalty
-            
-        # Update model weights
-        gradients = tape.gradient(total_loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
-        
-        # Update safety metrics
-        self.update_safety_metrics(output)
-        
-        return total_loss
-```
-
-##### C. JAX/Flax Integration
-
-###### 1. Basic JAX Model with Safety
-```python
-import jax
-import flax.linen as nn
-from safety_features.frameworks.jax import JAXSafetyWrapper
-
-class SafeJAXModel(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.model = YourJAXModel()
-        self.safety_wrapper = JAXSafetyWrapper(config)
-        
-    def __call__(self, x, training=False):
-        # Safety checks before forward pass
-        x = self.safety_wrapper.validate_input(x)
-        
-        # Regular forward pass
-        output = self.model(x, training=training)
-        
-        # Safety checks after forward pass
-        output = self.safety_wrapper.validate_output(output)
-        return output
-        
-    def get_safety_metrics(self):
-        return self.safety_wrapper.get_metrics()
-```
-
-###### 2. JAX Training with Safety
-```python
-from safety_features.frameworks.jax import JAXSafetyTrainer
-
-class SafeJAXTrainer(JAXSafetyTrainer):
-    def __init__(self, model, config):
-        super().__init__(model, config)
-        self.safety_metrics = {}
-        
-    @jax.jit
-    def train_step(self, state, batch):
-        def loss_fn(params):
-            # Safety checks on batch
-            batch = self.validate_batch(batch)
-            
-            # Forward pass with safety
-            output = self.model.apply(params, batch, training=True)
-            
-            # Compute loss with safety penalty
-            loss = self.compute_loss(output, batch)
-            safety_penalty = self.compute_safety_penalty(output)
-            return loss + self.config.safety_weight * safety_penalty
-            
-        # Compute gradients
-        grad_fn = jax.value_and_grad(loss_fn)
-        loss, grads = grad_fn(state.params)
-        
-        # Update model parameters
-        state = state.apply_gradients(grads=grads)
-        
-        # Update safety metrics
-        self.update_safety_metrics(output)
-        
-        return state, loss
-```
-
-##### D. Framework-Specific Configuration
-
-###### 1. PyTorch Configuration
-```python
-pytorch_config = {
-    "framework": "pytorch",
-    "safety": {
-        "enabled": True,
-        "checks": {
-            "input_validation": True,
-            "output_validation": True,
-            "gradient_clipping": True
-        },
-        "metrics": {
-            "track_gradients": True,
-            "track_activations": True
-        }
-    },
-    "training": {
-        "safety_weight": 0.1,
-        "gradient_clip_val": 1.0
+# Custom blockchain configuration
+custom_config = {
+    "blockchain": {
+        "networks": ["ipfs"],
+        "ipfs": {"url": "http://custom-ipfs-node:5001"}
     }
+}
+provenance_tracker = ProvenanceTracker(config=custom_config)
+```
+
+## Blockchain Networks
+
+### IPFS (InterPlanetary File System)
+
+**Advantages:**
+- Decentralized storage
+- Content-addressed
+- No transaction fees
+- High availability
+
+**Setup:**
+```bash
+# Install IPFS
+brew install ipfs  # macOS
+# or download from https://ipfs.io/docs/install/
+
+# Start IPFS daemon
+ipfs daemon
+```
+
+**Use Case**: Development and testing
+
+### Ethereum
+
+**Advantages:**
+- Smart contract support
+- Immutable blockchain
+- Programmable verification
+- Global consensus
+
+**Setup:**
+```bash
+# Install Geth
+brew install ethereum
+
+# Start local dev node
+bash scripts/setup_local_geth.sh
+```
+
+**Use Case**: Production environments
+
+### Bitcoin
+
+**Advantages:**
+- Most secure blockchain
+- OP_RETURN for data storage
+- Global consensus
+- Long-term stability
+
+**Setup:**
+```bash
+# Install Bitcoin Core
+brew install bitcoin
+
+# Configure bitcoin.conf
+echo "rpcuser=your_username" >> ~/.bitcoin/bitcoin.conf
+echo "rpcpassword=your_password" >> ~/.bitcoin/bitcoin.conf
+echo "rpcallowip=127.0.0.1" >> ~/.bitcoin/bitcoin.conf
+
+# Start Bitcoin node
+bitcoind
+```
+
+**Use Case**: High-security requirements
+
+## Output Files
+
+The system generates several output files:
+
+- `blockchain_report.json` - Complete blockchain verification report
+- `provenance_report.json` - Standard provenance report with blockchain info
+- `merkle_tree_*.json` - Merkle tree structure files
+- `geth_dev.log` - Geth development node logs
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Import Errors
+**Problem:** `ModuleNotFoundError: No module named 'git'`
+
+**Solution:**
+```bash
+pip install gitpython
+```
+
+#### 2. Geth Connection Issues
+**Problem:** `Connection refused` when connecting to Geth
+
+**Solution:**
+```bash
+# Check if Geth is running
+lsof -i :8545
+
+# Start Geth if not running
+bash scripts/setup_local_geth.sh
+```
+
+#### 3. IPFS Connection Issues
+**Problem:** `Connection refused` when connecting to IPFS
+
+**Solution:**
+```bash
+# Start IPFS daemon
+ipfs daemon
+```
+
+#### 4. Private Key Issues
+**Problem:** `Invalid private key` error
+
+**Solution:**
+```bash
+# Extract private key from Geth dev node
+echo 'eth.accounts' | geth attach http://127.0.0.1:8545
+# Then extract private key from keystore file
+```
+
+#### 5. Gas Limit Issues
+**Problem:** `Out of gas` error on Ethereum
+
+**Solution:**
+```json
+{
+  "ethereum": {
+    "gas_limit": 500000,
+    "gas_price": "auto"
+  }
 }
 ```
 
-###### 2. TensorFlow Configuration
+### Debug Mode
+
+Enable debug logging:
+
 ```python
-tensorflow_config = {
-    "framework": "tensorflow",
-    "safety": {
-        "enabled": True,
-        "checks": {
-            "input_validation": True,
-            "output_validation": True,
-            "gradient_clipping": True
-        },
-        "metrics": {
-            "track_gradients": True,
-            "track_activations": True
-        }
-    },
-    "training": {
-        "safety_weight": 0.1,
-        "gradient_clip_norm": 1.0
-    }
-}
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Or in configuration
+config["blockchain"]["debug"] = True
 ```
 
-###### 3. JAX Configuration
-```python
-jax_config = {
-    "framework": "jax",
-    "safety": {
-        "enabled": True,
-        "checks": {
-            "input_validation": True,
-            "output_validation": True,
-            "gradient_clipping": True
-        },
-        "metrics": {
-            "track_gradients": True,
-            "track_activations": True
-        }
-    },
-    "training": {
-        "safety_weight": 0.1,
-        "gradient_clip_norm": 1.0
-    }
-}
+### Network-Specific Issues
+
+#### Ethereum
+```bash
+# Check Geth logs
+tail -f geth_dev.log
+
+# Check account balance
+echo 'eth.getBalance(eth.accounts[0])' | geth attach http://127.0.0.1:8545
 ```
 
-[Source: `safety_features/frameworks/config.py`] 
+#### IPFS
+```bash
+# Check IPFS status
+ipfs id
+
+# Check if content is available
+ipfs cat <CID>
+```
+
+## Best Practices
+
+### 1. Configuration Management
+- Store sensitive data (private keys) in environment variables
+- Use different configurations for development and production
+- Version control your configuration templates
+
+### 2. Error Handling
+```python
+try:
+    transactions = provenance_tracker.store_merkle_on_blockchain_before_training(config)
+    if transactions:
+        print("✅ Blockchain storage successful")
+    else:
+        print("⚠️ Blockchain storage failed")
+except Exception as e:
+    print(f"❌ Error: {e}")
+    # Fallback to local storage only
+```
+
+### 3. Performance Optimization
+- Use IPFS for development (faster, no fees)
+- Use Ethereum for production (immutable, verifiable)
+- Cache verification results
+- Batch operations when possible
+
+### 4. Security
+- Never commit private keys to version control
+- Use test networks for development
+- Validate all blockchain responses
+- Implement proper access controls
+
+### 5. Monitoring
+```python
+# Monitor blockchain status
+status = provenance_tracker.get_blockchain_status()
+if not status['blockchain_enabled']:
+    logger.warning("Blockchain tracking disabled")
+
+# Monitor verification results
+verification = provenance_tracker.verify_blockchain_provenance()
+if not verification['chain_integrity']:
+    logger.error("Provenance chain integrity failed")
+```
+
+## Demo and Testing
+
+### Run the Demo
+
+```bash
+python3 scripts/demo_blockchain_provenance.py
+```
+
+This will:
+1. Initialize a provenance tracker with blockchain support
+2. Create sample data and model
+3. Store pre-training hash on blockchain
+4. Simulate training process
+5. Store post-training hash on blockchain
+6. Verify blockchain provenance
+7. Generate comprehensive report
+
+### Expected Output
+
+```
+🚀 Blockchain Provenance Demo
+================================
+
+📊 Initializing Provenance Tracker...
+✅ Provenance tracker initialized with blockchain support
+
+🔗 Blockchain Status:
+   - IPFS: ✅ Connected (http://localhost:5001)
+   - Ethereum: ✅ Connected (http://127.0.0.1:8545)
+   - Bitcoin: ❌ Not configured
+
+📈 Creating Sample Data and Model...
+✅ Sample data created (1000 training, 200 test samples)
+✅ Sample model created (2-layer neural network)
+
+🌳 Building Merkle Tree...
+✅ Merkle tree built with root hash: a1b2c3d4...
+
+🔗 Storing Pre-Training Hash on Blockchain...
+   - IPFS: ✅ Stored (CID: QmX...)
+   - Ethereum: ✅ Stored (Tx: 0x...)
+
+📊 Simulating Training Process...
+   - Epoch 1: Loss=0.693, Accuracy=0.500
+   - Epoch 2: Loss=0.523, Accuracy=0.750
+   - Epoch 3: Loss=0.321, Accuracy=0.850
+
+🌳 Updating Merkle Tree with Training Results...
+✅ Merkle tree updated with new root hash: e5f6g7h8...
+
+🔗 Storing Post-Training Hash on Blockchain...
+   - IPFS: ✅ Stored (CID: QmY...)
+   - Ethereum: ✅ Stored (Tx: 0x...)
+
+🔍 Verifying Blockchain Provenance...
+✅ Chain integrity verified across all networks
+✅ All hashes match expected values
+✅ Timestamps are consistent
+
+📄 Generating Blockchain Report...
+✅ Report saved to: blockchain_report.json
+
+🎉 Demo completed successfully!
+```
+
+## Additional Resources
+
+- **[Developer Guide](developer_guide.md)** - Comprehensive guide for developers
+- **[Blockchain Integration](blockchain_provenance.md)** - Detailed blockchain documentation
+- **[Architecture](ARCHITECTURE.md)** - System architecture overview
+- **[Provenance Tracking](provenance_tracking.md)** - Provenance tracking concepts
+- **[Model Training](model_training_and_safety.md)** - Training and safety features
+
+## Support
+
+For issues and questions:
+
+1. Check the troubleshooting section above
+2. Review the [developer guide](developer_guide.md)
+3. Check existing issues on GitHub
+4. Create a new issue with detailed information
+
+---
+
+*This user documentation provides a comprehensive guide for using the blockchain-enabled ML provenance tracking system. For advanced usage and development, see the [Developer Guide](developer_guide.md).* 

@@ -25,7 +25,6 @@ deactivate
 
 # Create necessary directories
 mkdir -p artifacts/provenance
-mkdir -p artifacts/models
 
 # Print completion message
 echo "Training completed. Check artifacts/provenance for the latest run." 

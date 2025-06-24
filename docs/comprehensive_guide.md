@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This guide provides a comprehensive framework for implementing model provenance tracking and safety mechanisms in machine learning systems. It addresses the critical need for accountability, transparency, and trust in AI systems through systematic tracking of model lineage and implementation of safety checks.
+This guide provides a comprehensive framework for implementing model provenance tracking and safety mechanisms in machine learning systems with blockchain integration. It addresses the critical need for accountability, transparency, and trust in AI systems through systematic tracking of model lineage, implementation of safety checks, and immutable blockchain-based audit trails.
 
 ## Table of Contents
 
@@ -12,10 +12,11 @@ This guide provides a comprehensive framework for implementing model provenance 
 4. [Framework-Specific Implementations](#framework-specific-implementations)
 5. [Safety Mechanisms](#safety-mechanisms)
 6. [Provenance Validation](#provenance-validation)
-7. [Compliance and Governance](#compliance-and-governance)
-8. [Best Practices](#best-practices)
-9. [Case Studies](#case-studies)
-10. [Future Directions](#future-directions)
+7. [Blockchain Integration](#blockchain-integration)
+8. [Compliance and Governance](#compliance-and-governance)
+9. [Best Practices](#best-practices)
+10. [Case Studies](#case-studies)
+11. [Future Directions](#future-directions)
 
 ## Introduction
 
@@ -25,6 +26,7 @@ Model provenance and safety are fundamental to responsible AI development. This 
 
 - **Provenance Tracking**: Complete lineage tracking from data to deployment
 - **Safety Mechanisms**: Input/output validation, bias detection, privacy preservation
+- **Blockchain Integration**: Immutable, tamper-evident audit trails
 - **Compliance Framework**: Regulatory adherence and governance
 - **Implementation Guidelines**: Practical implementation across frameworks
 
@@ -33,6 +35,7 @@ Model provenance and safety are fundamental to responsible AI development. This 
 - **Accountability**: Track model development and deployment
 - **Reproducibility**: Enable exact model recreation
 - **Trust**: Build confidence in AI systems
+- **Immutability**: Blockchain-based tamper-evident audit trails
 - **Compliance**: Meet regulatory requirements
 - **Risk Mitigation**: Prevent harmful outcomes
 
@@ -728,6 +731,308 @@ class ProvenanceValidator:
             'recommendations': self.generate_recommendations(validation_results)
         }
 ```
+
+## Blockchain Integration
+
+### Overview
+
+Blockchain integration provides immutable, tamper-evident audit trails for ML provenance by storing Merkle tree hashes on multiple blockchain networks before and after training runs.
+
+### Key Features
+
+- **🔗 Multi-Blockchain Support**: IPFS, Ethereum, Bitcoin
+- **📊 Merkle Tree Integration**: Cryptographic verification of ML pipeline
+- **🔒 Immutable Provenance**: Tamper-evident audit trails
+- **⚡ Auto Mode**: Fully automated blockchain integration
+- **🛠️ Developer Friendly**: Easy setup and configuration
+
+### Supported Networks
+
+#### IPFS (InterPlanetary File System)
+
+**Type**: Decentralized storage network  
+**Storage Method**: Content-addressed storage  
+**Advantages**: No fees, high availability, decentralized  
+**Use Case**: Development, testing, backup storage
+
+**Setup:**
+```bash
+# Install IPFS
+brew install ipfs  # macOS
+# or download from https://ipfs.io/docs/install/
+
+# Start IPFS daemon
+ipfs daemon
+```
+
+**Configuration:**
+```json
+{
+  "ipfs": {
+    "enabled": true,
+    "url": "http://localhost:5001",
+    "timeout": 30,
+    "retry_attempts": 3
+  }
+}
+```
+
+#### Ethereum
+
+**Type**: Smart contract platform  
+**Storage Method**: Smart contract state  
+**Advantages**: Immutable, programmable, global consensus  
+**Use Case**: Production environments, regulatory compliance
+
+**Setup:**
+```bash
+# Install Geth
+brew install ethereum
+
+# Start local dev node
+bash scripts/setup_local_geth.sh
+```
+
+**Configuration:**
+```json
+{
+  "ethereum": {
+    "enabled": true,
+    "rpc_url": "http://127.0.0.1:8545",
+    "private_key": "your_private_key",
+    "contract_address": null,
+    "gas_limit": 300000,
+    "gas_price": "auto"
+  }
+}
+```
+
+#### Bitcoin
+
+**Type**: Cryptocurrency blockchain  
+**Storage Method**: OP_RETURN transactions  
+**Advantages**: Maximum security, long-term stability  
+**Use Case**: High-security requirements, long-term storage
+
+### Data Flow
+
+1. **Pre-Training**: Data + Model → Merkle Tree → Root Hash → Blockchain Storage
+2. **Training**: Training Process → Epoch Updates → Merkle Tree Updates
+3. **Post-Training**: Final Model + Results → Merkle Tree → Root Hash → Blockchain Storage
+4. **Verification**: Stored Hashes → Blockchain Verification → Integrity Report
+
+### Implementation
+
+#### Basic Usage
+
+```python
+from ml_provenance.provenance.tracker import ProvenanceTracker
+import json
+
+# Load configuration
+with open('configs/blockchain_config.json', 'r') as f:
+    config = json.load(f)
+
+# Initialize tracker with blockchain support
+provenance_tracker = ProvenanceTracker(config=config)
+
+# Track data and model
+provenance_tracker.track_data(train_data, test_data)
+provenance_tracker.track_model(model)
+
+# Store pre-training hash on blockchain
+training_config = {"epochs": 5, "batch_size": 32}
+before_transactions = provenance_tracker.store_merkle_on_blockchain_before_training(training_config)
+
+# ... training process ...
+
+# Store post-training hash on blockchain
+training_results = {"accuracy": 0.95, "loss": 0.1}
+after_transactions = provenance_tracker.store_merkle_on_blockchain_after_training(training_results)
+
+# Verify blockchain provenance
+verification_results = provenance_tracker.verify_blockchain_provenance()
+
+# Save reports
+provenance_tracker.save_blockchain_report()
+provenance_tracker.save()
+```
+
+#### Advanced Usage
+
+```python
+# Get blockchain status
+status = provenance_tracker.get_blockchain_status()
+print(f"Blockchain enabled: {status['blockchain_enabled']}")
+print(f"Stored hashes: {status['stored_hashes']}")
+
+# Verify specific networks
+verification = provenance_tracker.verify_blockchain_provenance()
+if verification['chain_integrity']:
+    print("✅ Provenance chain integrity verified!")
+else:
+    print("❌ Provenance chain integrity failed!")
+
+# Custom blockchain configuration
+custom_config = {
+    "blockchain": {
+        "networks": ["ipfs"],
+        "ipfs": {"url": "http://custom-ipfs-node:5001"}
+    }
+}
+provenance_tracker = ProvenanceTracker(config=custom_config)
+```
+
+### Smart Contract Integration
+
+For production Ethereum deployments, a smart contract can be used:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract MLProvenance {
+    mapping(bytes32 => bool) public storedHashes;
+    mapping(bytes32 => uint256) public timestamps;
+    mapping(bytes32 => string) public metadata;
+    
+    event HashStored(bytes32 indexed merkleRoot, string metadata, uint256 timestamp);
+    
+    function storeHash(bytes32 merkleRoot, string memory metadataStr) public {
+        storedHashes[merkleRoot] = true;
+        timestamps[merkleRoot] = block.timestamp;
+        metadata[merkleRoot] = metadataStr;
+        emit HashStored(merkleRoot, metadataStr, block.timestamp);
+    }
+    
+    function verifyHash(bytes32 merkleRoot) public view returns (bool) {
+        return storedHashes[merkleRoot];
+    }
+    
+    function getHashInfo(bytes32 merkleRoot) public view returns (bool, uint256, string memory) {
+        return (storedHashes[merkleRoot], timestamps[merkleRoot], metadata[merkleRoot]);
+    }
+}
+```
+
+### Configuration
+
+#### Blockchain Configuration
+
+Create `configs/blockchain_config.json`:
+
+```json
+{
+  "blockchain": {
+    "enabled": true,
+    "networks": ["ipfs", "ethereum"],
+    "ipfs": {
+      "enabled": true,
+      "url": "http://localhost:5001",
+      "timeout": 30,
+      "retry_attempts": 3
+    },
+    "ethereum": {
+      "enabled": true,
+      "rpc_url": "http://127.0.0.1:8545",
+      "private_key": "your_private_key_here",
+      "contract_address": null,
+      "gas_limit": 300000,
+      "gas_price": "auto"
+    },
+    "storage_options": {
+      "store_before_training": true,
+      "store_after_training": true,
+      "store_epoch_checkpoints": false
+    }
+  }
+}
+```
+
+#### Training Configuration
+
+```python
+config = {
+    "epochs": 5,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "hash_algorithm": "blake3",
+    "blockchain": {
+        "networks": ["ipfs", "ethereum"],
+        "ipfs": {"url": "http://localhost:5001"},
+        "ethereum": {
+            "rpc_url": "http://127.0.0.1:8545",
+            "private_key": "your_private_key"
+        }
+    }
+}
+```
+
+### Security Considerations
+
+#### Private Key Management
+- Store private keys in environment variables
+- Use different keys for development and production
+- Implement proper access controls
+
+#### Network Security
+- Use HTTPS for RPC endpoints
+- Validate blockchain responses
+- Implement retry mechanisms with exponential backoff
+
+#### Data Privacy
+- Only store hashes, not raw data
+- Consider metadata sensitivity
+- Implement access controls for blockchain data
+
+### Performance Considerations
+
+#### Network Selection
+- **IPFS**: Fastest, no fees, good for development
+- **Ethereum**: Medium speed, gas fees, production-ready
+- **Bitcoin**: Slowest, low fees, maximum security
+
+#### Optimization Strategies
+- Cache verification results
+- Batch operations when possible
+- Use appropriate gas limits for Ethereum
+- Implement connection pooling
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Import Errors**: `pip install gitpython`
+2. **Geth Connection**: Check if Geth is running with `lsof -i :8545`
+3. **IPFS Connection**: Start IPFS daemon with `ipfs daemon`
+4. **Private Key Issues**: Extract from Geth dev node keystore
+5. **Gas Limit Issues**: Increase gas limit in configuration
+
+#### Debug Mode
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Or in configuration
+config["blockchain"]["debug"] = True
+```
+
+### Best Practices
+
+1. **Configuration Management**: Store sensitive data in environment variables
+2. **Error Handling**: Implement graceful fallbacks for blockchain failures
+3. **Performance Optimization**: Use appropriate networks for your use case
+4. **Security**: Never commit private keys to version control
+5. **Monitoring**: Monitor blockchain status and verification results
+
+### Future Enhancements
+
+- **Multi-signature support**: Require multiple signatures for critical operations
+- **Time-locked contracts**: Automatic verification at specific intervals
+- **Cross-chain verification**: Verify hashes across different blockchain networks
+- **Zero-knowledge proofs**: Privacy-preserving verification
+- **Automated compliance**: Regulatory compliance reporting
 
 ## Compliance and Governance
 

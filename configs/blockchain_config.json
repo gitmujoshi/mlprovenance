@@ -1,0 +1,45 @@
+{
+  "_comment": "SECURITY: Private keys should be set via environment variables (ETH_PRIVATE_KEY, BTC_PRIVATE_KEY) rather than in this file. Never commit private keys to version control.",
+  "blockchain": {
+    "enabled": true,
+    "networks": ["ipfs", "ethereum"],
+    "ipfs": {
+      "enabled": false,
+      "url": "http://localhost:5001",
+      "timeout": 30,
+      "retry_attempts": 3
+    },
+    "ethereum": {
+      "enabled": true,
+      "rpc_url": "http://127.0.0.1:8545",
+      "private_key": null,
+      "contract_address": null,
+      "gas_limit": 300000,
+      "gas_price": "auto"
+    },
+    "bitcoin": {
+      "enabled": false,
+      "rpc_url": "http://localhost:8332",
+      "private_key": null,
+      "network": "testnet",
+      "fee_rate": "medium"
+    },
+    "storage_options": {
+      "store_before_training": true,
+      "store_after_training": true,
+      "store_epoch_checkpoints": false,
+      "metadata_inclusion": {
+        "training_config": true,
+        "model_architecture": true,
+        "data_statistics": true,
+        "privacy_metrics": true,
+        "system_info": true
+      }
+    },
+    "verification": {
+      "verify_on_save": true,
+      "verify_on_load": true,
+      "cross_network_verification": false
+    }
+  }
+} 

@@ -1,3 +1,45 @@
+"""
+Provenance Tracking System for Machine Learning
+
+This module implements a comprehensive provenance tracking system for ML workflows,
+providing complete audit trails of data, models, and training processes. It integrates
+with blockchain networks for immutable storage and verification.
+
+Architecture:
+├── ProvenanceTracker: Main tracking coordinator
+├── Data Provenance: Dataset tracking and statistics
+├── Model Provenance: Architecture and parameter tracking
+├── Training Provenance: Process and metrics tracking
+├── Blockchain Integration: Immutable storage
+└── Verification: Integrity checking and validation
+
+Key Features:
+- Complete audit trail of ML lifecycle
+- Multi-hash algorithm support (BLAKE3, SHA256, SHA512)
+- Merkle tree construction for data integrity
+- Blockchain integration for immutability
+- Differential privacy tracking
+- Comprehensive metadata collection
+- Cross-platform compatibility
+
+Data Flow:
+1. Data Loading → Statistics Calculation → Hash Generation
+2. Model Creation → Architecture Extraction → Parameter Counting
+3. Training Process → Metrics Collection → Epoch Tracking
+4. Blockchain Storage → Merkle Root → Transaction Recording
+5. Verification → Integrity Check → Report Generation
+
+Security Features:
+- Cryptographic hash verification
+- Blockchain immutability
+- Audit logging
+- Data integrity checks
+- Privacy-preserving metrics
+
+Author: ML Provenance Team
+License: MIT
+"""
+
 import json
 import os
 import sys
@@ -12,6 +54,7 @@ import hashlib
 import pickle
 import base64
 from .merkle_tree import MLProvenanceMerkleTree
+from .blockchain import ProvenanceBlockchainTracker
 from typing import Dict, Any, List, Optional
 import opacus
 import torch.nn as nn
@@ -233,7 +276,7 @@ class Tracker:
         return self.provenance_dir
 
 class ProvenanceTracker:
-    def __init__(self, base_dir="artifacts"):
+    def __init__(self, base_dir="artifacts", config: Optional[Dict[str, Any]] = None):
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.base_dir = Path(base_dir)
         self.provenance_dir = self.base_dir / "provenance" / self.timestamp
@@ -259,6 +302,22 @@ class ProvenanceTracker:
         
         # Initialize Merkle tree
         self.merkle_tree = MLProvenanceMerkleTree()
+        
+        # Initialize blockchain tracker if config provided
+        self.blockchain_tracker = None
+        if config:
+            self.logger.info(f"DEBUG: Config provided, keys: {list(config.keys())}")
+            try:
+                self.blockchain_tracker = ProvenanceBlockchainTracker(config)
+                self.logger.info("DEBUG: ProvenanceBlockchainTracker created successfully")
+                self.logger.info("Blockchain tracking enabled")
+            except Exception as e:
+                self.logger.error(f"DEBUG: Failed to create ProvenanceBlockchainTracker: {e}")
+                import traceback
+                self.logger.error(f"DEBUG: Traceback: {traceback.format_exc()}")
+                self.blockchain_tracker = None
+        else:
+            self.logger.info("Blockchain tracking disabled - no config provided")
     
     def _make_serializable(self, data):
         if isinstance(data, dict):
@@ -279,7 +338,11 @@ class ProvenanceTracker:
         serializable_data = convert_to_serializable(data)
         self.logger.debug(f"Data structure for {component_name}: {json.dumps(serializable_data, indent=2)}")
         data_str = json.dumps(serializable_data, sort_keys=True)
-        return {"hash": hashlib.sha256(data_str.encode()).hexdigest()}
+        
+        # Use the configured hash function from HashFactory
+        from .hash_config import HashFactory
+        hash_function = HashFactory.get_hash_function()
+        return {"hash": hash_function(data_str.encode())}
     
     def _get_system_info(self):
         """Get system information."""
@@ -501,41 +564,51 @@ class ProvenanceTracker:
             if 'privacy_metrics' in epoch_data:
                 self.data['training_provenance']['final_metrics']['privacy_metrics'] = epoch_data['privacy_metrics']
             
-            # Build final Merkle tree
-            self.track_training_run(
-                self.data['data_provenance'],
-                self.data['model_provenance'],
-                self.data['training_provenance']
-            )
+            # Note: track_training_run is called explicitly in the main training script
+            # to avoid redundant Merkle tree dumps
     
     def save(self):
         """Save provenance data to JSON file."""
         self.logger.info("Saving provenance data...")
         
+        # Get Merkle root if available
+        merkle_root = None
+        merkle_tree_file = None
+        if hasattr(self, 'merkle_tree') and self.merkle_tree.root is not None:
+            try:
+                merkle_root = self.merkle_tree.get_root_hash()
+                merkle_tree_file = getattr(self, 'merkle_tree_file', None)
+            except Exception as e:
+                self.logger.warning(f"Could not get Merkle root: {e}")
+        
         # Prepare data for saving
         save_data = {
-            "version": self.data["version"],
+            "timestamp": self.timestamp,
+            "system_info": self._make_serializable(self.data["system_info"]),
+            "training_config": self._make_serializable(self.data.get("training_config", {})),
             "data_provenance": self._make_serializable(self.data["data_provenance"]),
             "model_provenance": self._make_serializable(self.data["model_provenance"]),
-            "training_provenance": self._make_serializable({
-                "epochs": self.data["training_provenance"].get("epochs", 0),
-                "batch_size": self.data["training_provenance"].get("batch_size", 64),
-                "learning_rate": self.data["training_provenance"].get("learning_rate", 0.001),
-                "training_history": self.data["training_provenance"].get("training_logs", []),
-                "privacy_metrics": self.data["training_provenance"].get("privacy_metrics", {}),
-                "final_metrics": convert_to_serializable(self.data["training_provenance"].get("final_metrics", {})),
-                "timestamp": self.data["training_provenance"].get("timestamp", self.timestamp)
-            }),
-            "system_info": self._make_serializable(self.data["system_info"]),
+            "training_provenance": self._make_serializable(self.data.get("training_provenance", {})),
+            "safety_metrics": self._make_serializable(self.data.get("safety_metrics", {})),
+            "epoch_metrics": self._make_serializable(self.data.get("epoch_metrics", [])),
             "hashes": self._make_serializable(self.data["hashes"])
         }
         
+        # Add Merkle tree information if available
+        if merkle_root:
+            save_data["merkle_tree"] = {
+                "root_hash": merkle_root,
+                "tree_file": merkle_tree_file,
+                "algorithm": "blake3"  # or get from config
+            }
+        
         # Save to JSON file
-        provenance_file = self.provenance_dir / "provenance.json"
+        provenance_file = self.provenance_dir / "provenance_report.json"
         with open(provenance_file, 'w') as f:
             json.dump(save_data, f, indent=2)
         
         self.logger.info(f"Provenance data saved to {provenance_file}")
+        return str(provenance_file)
     
     def get_provenance_proof(self, component_type, component_data):
         """Generate a Merkle proof for a specific component."""
@@ -559,10 +632,18 @@ class ProvenanceTracker:
         """Dump the Merkle tree structure to a JSON file."""
         tree_dict = self.merkle_tree.get_tree_dict()
         serializable_tree = convert_to_serializable(tree_dict)
-        filepath = os.path.join(self.provenance_dir, "merkle_tree_dump.json")
+        
+        # Create timestamped filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"merkle_tree_{timestamp}.json"
+        filepath = os.path.join(self.provenance_dir, filename)
+        
         with open(filepath, "w") as f:
             json.dump(serializable_tree, f, indent=2)
         self.logger.info(f"Merkle tree dumped to {filepath}")
+        
+        # Store the filename for inclusion in the main report
+        self.merkle_tree_file = filename
 
     def track_training_run(self, data_provenance, model_provenance, training_provenance):
         """Track a complete training run with detailed logging."""
@@ -627,4 +708,192 @@ class ProvenanceTracker:
         self.data["training_provenance"]["final_metrics"] = serialized_metrics
         if config:
             self.data["training_provenance"]["config"] = convert_to_serializable(config)
-        self.save() 
+        self.save()
+    
+    def set_log_file_path(self, log_file_path: str):
+        """Set the log file path in provenance data."""
+        if "training_provenance" not in self.data:
+            self.data["training_provenance"] = {}
+        
+        self.data["training_provenance"]["log_file_path"] = log_file_path
+        self.logger.info(f"Log file path tracked: {log_file_path}")
+    
+    def store_merkle_on_blockchain_before_training(self, training_config: Dict[str, Any]) -> Optional[Dict[str, str]]:
+        """
+        Store Merkle root hash on blockchain before training begins.
+        
+        Args:
+            training_config: Training configuration
+            
+        Returns:
+            Dictionary mapping networks to transaction IDs, or None if blockchain not enabled
+        """
+        if not self.blockchain_tracker:
+            self.logger.warning("Blockchain tracking not enabled - skipping pre-training storage")
+            return None
+        
+        try:
+            # Get current Merkle root hash
+            if hasattr(self.merkle_tree, 'root') and self.merkle_tree.root is not None:
+                merkle_root_hash = self.merkle_tree.get_root_hash()
+            else:
+                # Create initial Merkle tree with current data
+                self.merkle_tree.build_provenance_tree(
+                    self.data.get("data_provenance", {}),
+                    self.data.get("model_provenance", {}),
+                    self.data.get("training_provenance", {})
+                )
+                merkle_root_hash = self.merkle_tree.get_root_hash()
+            
+            # Store on blockchain
+            transaction_ids = self.blockchain_tracker.store_before_training(
+                merkle_root_hash, training_config
+            )
+            
+            # Store blockchain info in provenance data
+            self.data["blockchain"] = {
+                "before_training": {
+                    "merkle_root_hash": merkle_root_hash,
+                    "transaction_ids": transaction_ids,
+                    "timestamp": datetime.now().isoformat()
+                }
+            }
+            
+            self.logger.info(f"Stored pre-training Merkle root on blockchain: {merkle_root_hash}")
+            return transaction_ids
+            
+        except Exception as e:
+            self.logger.error(f"Failed to store pre-training hash on blockchain: {e}")
+            return None
+    
+    def store_merkle_on_blockchain_after_training(self, training_results: Dict[str, Any]) -> Optional[Dict[str, str]]:
+        """
+        Store Merkle root hash on blockchain after training completes.
+        
+        Args:
+            training_results: Training results and metrics
+            
+        Returns:
+            Dictionary mapping networks to transaction IDs, or None if blockchain not enabled
+        """
+        if not self.blockchain_tracker:
+            self.logger.warning("Blockchain tracking not enabled - skipping post-training storage")
+            return None
+        
+        try:
+            # Use existing Merkle tree if it's already built (from track_training_run)
+            if hasattr(self.merkle_tree, 'root') and self.merkle_tree.root is not None:
+                merkle_root_hash = self.merkle_tree.get_root_hash()
+                self.logger.info(f"Using existing Merkle tree with root hash: {merkle_root_hash}")
+            else:
+                # Fallback: rebuild tree if it doesn't exist (shouldn't happen in normal flow)
+                self.logger.warning("Merkle tree not found, rebuilding...")
+                self.merkle_tree.build_provenance_tree(
+                    self.data.get("data_provenance", {}),
+                    self.data.get("model_provenance", {}),
+                    self.data.get("training_provenance", {})
+                )
+                merkle_root_hash = self.merkle_tree.get_root_hash()
+            
+            # Store on blockchain
+            transaction_ids = self.blockchain_tracker.store_after_training(
+                merkle_root_hash, training_results
+            )
+            
+            # Update blockchain info in provenance data
+            if "blockchain" not in self.data:
+                self.data["blockchain"] = {}
+            
+            self.data["blockchain"]["after_training"] = {
+                "merkle_root_hash": merkle_root_hash,
+                "transaction_ids": transaction_ids,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            self.logger.info(f"Stored post-training Merkle root on blockchain: {merkle_root_hash}")
+            return transaction_ids
+            
+        except Exception as e:
+            self.logger.error(f"Failed to store post-training hash on blockchain: {e}")
+            return None
+    
+    def verify_blockchain_provenance(self) -> Dict[str, Any]:
+        """
+        Verify the complete provenance chain on blockchain.
+        
+        Returns:
+            Dictionary containing verification results
+        """
+        if not self.blockchain_tracker:
+            return {
+                "blockchain_enabled": False,
+                "verification_results": {},
+                "chain_integrity": False
+            }
+        
+        try:
+            verification_results = self.blockchain_tracker.verify_provenance_chain()
+            verification_results["blockchain_enabled"] = True
+            
+            self.logger.info("Blockchain provenance verification completed")
+            return verification_results
+            
+        except Exception as e:
+            self.logger.error(f"Failed to verify blockchain provenance: {e}")
+            return {
+                "blockchain_enabled": True,
+                "verification_results": {},
+                "chain_integrity": False,
+                "error": str(e)
+            }
+    
+    def save_blockchain_report(self, output_path: Optional[str] = None) -> Optional[str]:
+        """
+        Save blockchain report to file.
+        
+        Args:
+            output_path: Path to save the report (optional)
+            
+        Returns:
+            Path to the saved report, or None if blockchain not enabled
+        """
+        if not self.blockchain_tracker:
+            self.logger.warning("Blockchain tracking not enabled - cannot save blockchain report")
+            return None
+        
+        try:
+            if output_path is None:
+                output_path = self.provenance_dir / "blockchain_report.json"
+            
+            report_path = self.blockchain_tracker.save_blockchain_report(output_path)
+            self.logger.info(f"Blockchain report saved to: {report_path}")
+            return report_path
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save blockchain report: {e}")
+            return None
+    
+    def get_blockchain_status(self) -> Dict[str, Any]:
+        """
+        Get current blockchain status and configuration.
+        
+        Returns:
+            Dictionary containing blockchain status
+        """
+        status = {
+            "blockchain_enabled": self.blockchain_tracker is not None,
+            "stored_hashes": {},
+            "verification_results": {}
+        }
+        
+        if self.blockchain_tracker:
+            # Get stored hashes
+            status["stored_hashes"] = self.blockchain_tracker.stored_hashes
+            
+            # Get verification results
+            status["verification_results"] = self.verify_blockchain_provenance()
+            
+            # Get blockchain config
+            status["blockchain_config"] = self.blockchain_tracker.config.get("blockchain", {})
+        
+        return status 

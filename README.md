@@ -1,297 +1,314 @@
-# MNIST Provenance Tracking with Differential Privacy
+# MNIST Provenance Tracking with Blockchain Integration
 
-This project demonstrates provenance tracking for a machine learning model trained on the MNIST dataset, now with added differential privacy protection. It includes comprehensive tracking of data, model, and training provenance, along with verification capabilities.
+A comprehensive machine learning provenance tracking system with blockchain integration for immutable, tamper-evident audit trails.
 
-## Features
+## 🚀 Features
 
-- **Data Provenance Tracking**
-  - Automatic download and verification of MNIST dataset
-  - Hash-based tracking of training and test data
-  - Data integrity verification through Merkle proofs
-  - Support for multiple data mirrors for reliable downloads
+- **🔗 Multi-Blockchain Support**: IPFS, Ethereum, Bitcoin
+- **📊 Merkle Tree Integration**: Cryptographic verification of ML pipeline
+- **🔒 Immutable Provenance**: Tamper-evident audit trails
+- **⚡ Auto Mode**: Fully automated blockchain integration
+- **🛠️ Developer Friendly**: Easy setup and configuration
+- **🔐 Privacy-Preserving**: Differential privacy support
+- **📈 Comprehensive Tracking**: Data, model, and training provenance
 
-- **Model Provenance**
-  - Architecture tracking with layer-by-layer verification
-  - Weights tracking with hash-based verification
-  - Model integrity checks during training
-  - Support for model versioning
-
-- **Training Process Monitoring**
-  - Real-time tracking of training metrics
-  - Privacy budget monitoring
-  - Comprehensive logging of training parameters
-  - Performance metrics tracking (accuracy, loss)
-  - Per-epoch Merkle tree updates with:
-    - Model state hash
-    - Training metrics (loss, accuracy)
-    - Privacy metrics (if applicable)
-    - Timestamp and epoch number
-
-- **Differential Privacy**
-  - Privacy-preserving training using Opacus
-  - Configurable privacy budget (epsilon, delta)
-  - Gradient clipping and noise addition
-  - Privacy budget tracking
-
-- **Verification System**
-  - Merkle tree-based verification with:
-    - Root hash verification
-    - Component-wise hash verification
-    - Proof generation for data, model, and training
-    - Automated integrity checks
-  - Comprehensive verification reports including:
-    - Data verification (hash match, statistics, metadata)
-    - Model verification (architecture, weights)
-    - Training verification (metrics, logs)
-    - Privacy verification (budget consumption)
-  - Merkle tree structure:
-    ```
-    Root Hash
-    ├── Data Node
-    │   ├── Training Data Hash
-    │   └── Test Data Hash
-    ├── Model Node
-    │   ├── Architecture Hash
-    │   └── Weights Hash
-    └── Training Node
-        ├── Epoch 1 Node
-        │   ├── Model State Hash
-        │   ├── Metrics Hash
-        │   └── Privacy Metrics Hash
-        ├── Epoch 2 Node
-        │   ├── Model State Hash
-        │   ├── Metrics Hash
-        │   └── Privacy Metrics Hash
-        └── ... (subsequent epochs)
-    ```
-
-- **Reporting**
-  - Detailed markdown reports
-  - Training statistics and metrics
-  - Privacy budget consumption
-  - Verification results
-  - Merkle tree visualization
-
-## Project Structure
+## 🏗️ Architecture
 
 ```
-mnist_provenance/
-├── src/
-│   ├── provenance/
-│   │   ├── tracker.py      # Provenance tracking implementation
-│   │   ├── verifier.py     # Verification system
-│   │   ├── merkle_tree.py  # Merkle tree implementation
-│   │   └── generate_final_report.py  # Report generation
-│   └── training/
-│       └── train.py        # Training implementation
-├── scripts/
-│   ├── setup.sh           # Environment setup script
-│   ├── setup_test.py      # Setup verification
-│   ├── run_training.sh    # Training execution script
-│   └── merkle_proof_demo.py  # Merkle proof demonstration
-├── docs/
-│   ├── technical_documentation.md  # Technical documentation
-│   └── user_documentation.md      # User documentation
-├── data/                  # MNIST dataset storage
-│   ├── train-images-idx3-ubyte.gz
-│   ├── train-labels-idx1-ubyte.gz
-│   ├── t10k-images-idx3-ubyte.gz
-│   └── t10k-labels-idx1-ubyte.gz
-├── artifacts/
-│   ├── models/           # Trained model storage
-│   └── provenance/       # Provenance reports
-├── tests/                # Unit tests
-├── setup.py             # Package setup configuration
-├── pyproject.toml       # Build system configuration
-└── MANIFEST.in          # Package manifest
+┌─────────────────────────────────────────────────────────────┐
+│                    ML Training Pipeline                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Data       │  │   Model      │  │   Training       │  │
+│  │  Provenance  │  │  Provenance  │  │  Provenance      │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 ProvenanceTracker                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   Merkle Tree   │  │  Blockchain     │  │  Provenance  │ │
+│  │   Generation    │  │  Integration    │  │  Data        │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 BlockchainManager                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Ethereum   │  │   Bitcoin    │  │      IPFS        │  │
+│  │  Interface   │  │  Interface   │  │    Interface     │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Installation
+## 🚀 Quick Start
 
-### As a Package
-
-The project can be installed as a Python package:
+### 1. Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/mnist_provenance.git
+git clone <repository-url>
 cd mnist_provenance
-
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Unix/macOS
-# or
-.\venv\Scripts\activate  # On Windows
-
-# Install the package in development mode
-pip install -e .
-```
-
-### Package Dependencies
-
-The package requires the following dependencies:
-- numpy>=1.19.0
-- pandas>=1.2.0
-- torch>=1.7.0
-- tensorflow>=2.4.0
-- scikit-learn>=0.24.0
-- mlflow>=1.20.0
-- blake3>=0.3.0
-
-Development dependencies:
-- pytest>=6.0
-- black>=21.0
-- isort>=5.0
-- flake8>=3.9
-- mypy>=0.910
-
-### Automatic Setup
-
-The easiest way to set up the project is to use the provided setup script:
-
-```bash
-./scripts/setup.sh
-```
-
-This script will:
-1. Create a virtual environment
-2. Install all required dependencies
-3. Create necessary directories
-4. Run a setup test to verify the installation
-
-### Manual Setup
-
-If you prefer to set up manually:
-
-1. Create a virtual environment:
-```bash
-python -m venv venv
-```
-
-2. Activate the virtual environment:
-```bash
-source venv/bin/activate  # On Unix/macOS
-# or
-.\venv\Scripts\activate  # On Windows
-```
-
-3. Install PyTorch and torchvision:
-```bash
-pip install torch==2.7.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cpu
-```
-
-4. Install other dependencies:
-```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Setup Instructions
-1. Run the setup script:
-   ```sh
-   bash scripts/setup.sh
-   ```
-2. **After setup, activate the virtual environment before running any Python scripts:**
-   ```sh
-   source venv/bin/activate
-   ```
-   Or, use the venv's Python directly:
-   ```sh
-   ./venv/bin/python <your_script.py>
-   ```
-
-## Usage
-
-### Running the Training Script
-
-Run the training script:
-```bash
-./scripts/run_training.sh
-```
-
-This will:
-1. Install the package in development mode
-2. Download MNIST dataset if not present
-3. Train a model with differential privacy
-4. Track all provenance information
-5. Generate a detailed report in the artifacts directory
-
-### Training Results
-
-The model achieves:
-- Final accuracy: ~88.8%
-- Final loss: ~0.416
-- Training progress:
-  - Epoch 1: 66.1% accuracy
-  - Epoch 2: 80.8% accuracy
-  - Epoch 3: 84.2% accuracy
-  - Epoch 4: 85.3% accuracy
-  - Epoch 5: 86.2% accuracy
-
-### Common Warnings and Solutions
-
-During training, you may encounter the following warnings:
-
-1. **NumPy Array Warnings**
-   ```
-   UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors.
-   ```
-   - **Cause**: PyTorch is converting read-only NumPy arrays to tensors
-   - **Impact**: No functional impact on training
-   - **Solution**: The warning is automatically suppressed after the first occurrence
-
-2. **Secure RNG Warning**
-   ```
-   UserWarning: Secure RNG turned off. This is perfectly fine for experimentation...
-   ```
-   - **Cause**: Opacus's secure random number generation is disabled for faster training
-   - **Impact**: Slightly reduced security guarantees during experimentation
-   - **Solution**: Enable secure mode for production by setting `secure_mode=True` in the PrivacyEngine
-
-3. **Backward Hook Warning**
-   ```
-   FutureWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes...
-   ```
-   - **Cause**: PyTorch's internal hook system is being used in a way that will be deprecated
-   - **Impact**: No functional impact on training
-   - **Solution**: This is an internal PyTorch warning that will be addressed in future versions
-
-These warnings are expected during training and don't affect the model's functionality or privacy guarantees.
-
-### Privacy Parameters
-
-The differential privacy implementation uses:
-- Target epsilon (privacy budget): 1.0
-- Target delta (failure probability): 1e-5
-- Max gradient norm: 1.0
-
-These parameters can be adjusted in `src/training/train.py` to balance privacy and model performance.
-
-### Generating and Verifying Merkle Proofs
-
-You can generate and verify Merkle proofs for any tracked component:
+### 2. Start Local Blockchain (Optional)
 
 ```bash
-python scripts/merkle_proof_demo.py
+# Start local Geth node for Ethereum development
+bash scripts/setup_local_geth.sh
+
+# Or use IPFS only (default)
+# No additional setup required
 ```
 
-The verification system provides:
-- Data integrity proofs
-- Model architecture verification
-- Training process verification
-- Overall system integrity checks
+### 3. Run Demo
 
-## Requirements
+```bash
+python3 scripts/demo_blockchain_provenance.py
+```
+
+### 4. Run Training
+
+```bash
+python3 src/ml_provenance/training/train.py
+```
+
+## 📚 Documentation
+
+- **[Developer Guide](docs/developer_guide.md)** - Comprehensive guide for developers
+- **[Blockchain Integration](docs/blockchain_provenance.md)** - Detailed blockchain documentation
+- **[Architecture](ARCHITECTURE.md)** - System architecture overview
+- **[Provenance Tracking](docs/provenance_tracking.md)** - Provenance tracking concepts
+- **[Model Training](docs/model_training_and_safety.md)** - Training and safety features
+
+## 🔧 Configuration
+
+### Blockchain Configuration
+
+```json
+{
+  "blockchain": {
+    "enabled": true,
+    "networks": ["ipfs", "ethereum"],
+    "ipfs": {
+      "enabled": true,
+      "url": "http://localhost:5001"
+    },
+    "ethereum": {
+      "enabled": true,
+      "rpc_url": "http://127.0.0.1:8545",
+      "private_key": null
+    }
+  }
+}
+```
+
+**⚠️ Security Best Practices:**
+
+1. **Never store private keys in configuration files**
+2. **Use environment variables for sensitive data:**
+   ```bash
+   # Set environment variables
+   export ETH_PRIVATE_KEY=your_ethereum_private_key_here
+   export BTC_PRIVATE_KEY=your_bitcoin_private_key_here
+   
+   # Or use a .env file (copy from env.example)
+   cp env.example .env
+   # Edit .env with your actual private keys
+   ```
+
+3. **Add .env to .gitignore to prevent accidental commits**
+4. **Use testnet keys for development**
+5. **Rotate keys regularly in production**
+
+### Training Configuration
+
+```python
+config = {
+    "epochs": 5,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "hash_algorithm": "blake3",
+    "blockchain": {
+        "networks": ["ipfs", "ethereum"],
+        "ipfs": {"url": "http://localhost:5001"},
+        "ethereum": {
+            "rpc_url": "http://127.0.0.1:8545",
+            "private_key": None  # Will use ETH_PRIVATE_KEY environment variable
+        }
+    }
+}
+```
+
+## 💻 Usage Examples
+
+### Basic Usage
+
+```python
+from ml_provenance.provenance.tracker import ProvenanceTracker
+import json
+
+# Load configuration
+with open('configs/blockchain_config.json', 'r') as f:
+    config = json.load(f)
+
+# Initialize tracker with blockchain support
+provenance_tracker = ProvenanceTracker(config=config)
+
+# Track data and model
+provenance_tracker.track_data(train_data, test_data)
+provenance_tracker.track_model(model)
+
+# Store pre-training hash on blockchain
+before_transactions = provenance_tracker.store_merkle_on_blockchain_before_training(training_config)
+
+# ... training process ...
+
+# Store post-training hash on blockchain
+after_transactions = provenance_tracker.store_merkle_on_blockchain_after_training(training_results)
+
+# Verify blockchain provenance
+verification_results = provenance_tracker.verify_blockchain_provenance()
+```
+
+### Advanced Usage
+
+```python
+# Get blockchain status
+status = provenance_tracker.get_blockchain_status()
+print(f"Blockchain enabled: {status['blockchain_enabled']}")
+
+# Verify provenance chain
+verification = provenance_tracker.verify_blockchain_provenance()
+if verification['chain_integrity']:
+    print("✅ Provenance chain integrity verified!")
+```
+
+## 🔗 Supported Blockchain Networks
+
+### IPFS (InterPlanetary File System)
+- **Advantages**: Decentralized storage, no fees, high availability
+- **Setup**: `brew install ipfs && ipfs daemon`
+- **Use Case**: Development and testing
+
+### Ethereum
+- **Advantages**: Smart contracts, immutable blockchain, programmable verification
+- **Setup**: `brew install ethereum && bash scripts/setup_local_geth.sh`
+- **Use Case**: Production environments
+
+### Bitcoin
+- **Advantages**: Maximum security, global consensus, long-term stability
+- **Setup**: `brew install bitcoin && bitcoind`
+- **Use Case**: High-security requirements
+
+## 🛠️ Development
+
+### Prerequisites
 
 - Python 3.8+
-- PyTorch 2.7.1
-- Torchvision 0.18.1
-- Opacus 1.1.3
-- NumPy 1.26.4
-- Other dependencies as listed in requirements.txt
+- Git
+- Homebrew (for macOS)
 
-## License
+### Setup Development Environment
 
-MIT License 
+```bash
+# Clone repository
+git clone <repository-url>
+cd mnist_provenance
 
-## Usage
-- **Tip:** Always make sure your virtual environment is activated before running training or verification scripts. If not, use `./venv/bin/python` to ensure the correct environment is used. 
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install development dependencies
+pip install pytest black flake8
+
+# Run tests
+python -m pytest tests/
+```
+
+### Running Tests
+
+```bash
+# Unit tests
+python -m pytest tests/
+
+# Integration tests
+python scripts/demo_blockchain_provenance.py
+
+# Full training test
+python src/ml_provenance/training/train.py
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Import Errors**: `pip install gitpython web3 requests ipfshttpclient`
+2. **Geth Connection**: Check if Geth is running with `lsof -i :8545`
+3. **IPFS Connection**: Start IPFS daemon with `ipfs daemon`
+4. **Private Key Issues**: Extract from Geth dev node keystore
+
+### Debug Mode
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Or in configuration
+config["blockchain"]["debug"] = True
+```
+
+## 📊 Output Files
+
+The system generates several output files:
+
+- `blockchain_report.json` - Complete blockchain verification report
+- `provenance_report.json` - Standard provenance report with blockchain info
+- `merkle_tree_*.json` - Merkle tree structure files
+- `geth_dev.log` - Geth development node logs
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+
+- Follow PEP 8
+- Use type hints
+- Add docstrings
+- Write unit tests
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For issues and questions:
+
+1. Check the [troubleshooting section](docs/developer_guide.md#troubleshooting)
+2. Review the [API documentation](docs/developer_guide.md#api-reference)
+3. Check existing issues on GitHub
+4. Create a new issue with detailed information
+
+## 🙏 Acknowledgments
+
+- [PyTorch](https://pytorch.org/) for the deep learning framework
+- [Web3.py](https://web3py.readthedocs.io/) for Ethereum integration
+- [IPFS](https://ipfs.io/) for decentralized storage
+- [Opacus](https://opacus.ai/) for differential privacy
+
+---
+
+**Made with ❤️ for secure and verifiable machine learning** 
