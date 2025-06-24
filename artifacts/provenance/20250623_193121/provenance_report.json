@@ -1,0 +1,372 @@
+{
+  "timestamp": "20250623_193121",
+  "system_info": {
+    "python_version": "3.12.4 (v3.12.4:8e8a4baf65, Jun  6 2024, 17:33:18) [Clang 13.0.0 (clang-1300.0.29.30)]",
+    "torch_version": "2.8.0.dev20250615",
+    "platform": {
+      "system": "Darwin",
+      "release": "24.5.0",
+      "machine": "arm64"
+    },
+    "opacus_version": "1.5.4",
+    "timestamp": "20250623_193121"
+  },
+  "training_config": {},
+  "data_provenance": {
+    "train": {
+      "samples": 60000,
+      "mean": 0.13066062331199646,
+      "std": 0.30810776352882385,
+      "hash": "a28c845a15b42c097ef176bc7391a91b2e16c3325f00e5b8db6e3ed416c982ab",
+      "metadata": {
+        "statistics": {
+          "mean": 0.13066062331199646,
+          "std": 0.30810776352882385,
+          "min": 0.0,
+          "max": 1.0,
+          "shape": [
+            60000,
+            28,
+            28
+          ],
+          "dtype": "float32"
+        }
+      }
+    },
+    "test": {
+      "samples": 10000,
+      "mean": 0.13251467049121857,
+      "std": 0.3104802668094635,
+      "hash": "56783c614aa18159d2fbe215e087167cb6d35d8efc1b9f4e2fe20dfae7f435b3",
+      "metadata": {
+        "statistics": {
+          "mean": 0.13251467049121857,
+          "std": 0.3104802668094635,
+          "min": 0.0,
+          "max": 1.0,
+          "shape": [
+            10000,
+            28,
+            28
+          ],
+          "dtype": "float32"
+        }
+      }
+    },
+    "dataset": "MNIST",
+    "timestamp": "20250623_193121",
+    "hashes": {
+      "data": "fc892ff83f4dec2d995d97b9f4b115db33aeea8e639fa074f3461ede7299b50a"
+    }
+  },
+  "model_provenance": {
+    "architecture": {
+      "name": "MNISTModel",
+      "layers": [
+        {
+          "name": "conv1",
+          "type": "Conv2d",
+          "parameters": 320
+        },
+        {
+          "name": "conv2",
+          "type": "Conv2d",
+          "parameters": 18496
+        },
+        {
+          "name": "dropout1",
+          "type": "Dropout",
+          "parameters": 0
+        },
+        {
+          "name": "dropout2",
+          "type": "Dropout",
+          "parameters": 0
+        },
+        {
+          "name": "fc1",
+          "type": "Linear",
+          "parameters": 1179776
+        },
+        {
+          "name": "fc2",
+          "type": "Linear",
+          "parameters": 1290
+        }
+      ],
+      "total_parameters": 1199882,
+      "timestamp": "20250623_193121"
+    },
+    "timestamp": "20250623_193121"
+  },
+  "training_provenance": {
+    "log_file_path": "artifacts/provenance/20250623_193121/training_run_log_20250623_193121.txt",
+    "training_logs": [
+      {
+        "epoch": 1,
+        "train_loss": 1.5492897191916957,
+        "val_loss": 1.5492897191916957,
+        "train_acc": 0.5029482310613632,
+        "val_acc": 0.8131,
+        "is_final": false,
+        "privacy_metrics": {
+          "epsilon": 0.16507531071299766,
+          "delta": 1e-05,
+          "noise_multiplier": 1.0,
+          "privacy_budget": [
+            0.16507531071299766,
+            0.22683048309563675,
+            0.27545600911520846,
+            0.31712310744741357,
+            0.35427844413837406
+          ]
+        }
+      },
+      {
+        "epoch": 2,
+        "train_loss": 1.1720841398625486,
+        "val_loss": 1.1720841398625486,
+        "train_acc": 0.7064756370437164,
+        "val_acc": 0.8621,
+        "is_final": false,
+        "privacy_metrics": {
+          "epsilon": 0.22683048309563675,
+          "delta": 1e-05,
+          "noise_multiplier": 1.0,
+          "privacy_budget": [
+            0.16507531071299766,
+            0.22683048309563675,
+            0.27545600911520846,
+            0.31712310744741357,
+            0.35427844413837406
+          ]
+        }
+      },
+      {
+        "epoch": 3,
+        "train_loss": 1.2490011426304448,
+        "val_loss": 1.2490011426304448,
+        "train_acc": 0.7367442639423882,
+        "val_acc": 0.8806,
+        "is_final": false,
+        "privacy_metrics": {
+          "epsilon": 0.27545600911520846,
+          "delta": 1e-05,
+          "noise_multiplier": 1.0,
+          "privacy_budget": [
+            0.16507531071299766,
+            0.22683048309563675,
+            0.27545600911520846,
+            0.31712310744741357,
+            0.35427844413837406
+          ]
+        }
+      },
+      {
+        "epoch": 4,
+        "train_loss": 1.337576068064043,
+        "val_loss": 1.337576068064043,
+        "train_acc": 0.7490276254113892,
+        "val_acc": 0.8847,
+        "is_final": false,
+        "privacy_metrics": {
+          "epsilon": 0.31712310744741357,
+          "delta": 1e-05,
+          "noise_multiplier": 1.0,
+          "privacy_budget": [
+            0.16507531071299766,
+            0.22683048309563675,
+            0.27545600911520846,
+            0.31712310744741357,
+            0.35427844413837406
+          ]
+        }
+      },
+      {
+        "epoch": 5,
+        "train_loss": 1.3713468264287978,
+        "val_loss": 1.3713468264287978,
+        "train_acc": 0.7558184153889788,
+        "val_acc": 0.886,
+        "is_final": true,
+        "privacy_metrics": {
+          "epsilon": 0.35427844413837406,
+          "delta": 1e-05,
+          "noise_multiplier": 1.0,
+          "privacy_budget": [
+            0.16507531071299766,
+            0.22683048309563675,
+            0.27545600911520846,
+            0.31712310744741357,
+            0.35427844413837406
+          ]
+        }
+      }
+    ],
+    "final_metrics": {
+      "loss": 1.3713468264287978,
+      "train_accuracy": 0.7558184153889788,
+      "test_accuracy": 0.886,
+      "training_history": [
+        {
+          "epoch": 1,
+          "train_loss": 1.5492897191916957,
+          "val_loss": 1.5492897191916957,
+          "train_acc": 0.5029482310613632,
+          "val_acc": 0.8131
+        },
+        {
+          "epoch": 2,
+          "train_loss": 1.1720841398625486,
+          "val_loss": 1.1720841398625486,
+          "train_acc": 0.7064756370437164,
+          "val_acc": 0.8621
+        },
+        {
+          "epoch": 3,
+          "train_loss": 1.2490011426304448,
+          "val_loss": 1.2490011426304448,
+          "train_acc": 0.7367442639423882,
+          "val_acc": 0.8806
+        },
+        {
+          "epoch": 4,
+          "train_loss": 1.337576068064043,
+          "val_loss": 1.337576068064043,
+          "train_acc": 0.7490276254113892,
+          "val_acc": 0.8847
+        },
+        {
+          "epoch": 5,
+          "train_loss": 1.3713468264287978,
+          "val_loss": 1.3713468264287978,
+          "train_acc": 0.7558184153889788,
+          "val_acc": 0.886
+        }
+      ],
+      "privacy_metrics": {
+        "target_epsilon": 1.0,
+        "final_epsilon": 0.35427844413837406,
+        "delta": 1e-05,
+        "privacy_budget": [
+          0.16507531071299766,
+          0.22683048309563675,
+          0.27545600911520846,
+          0.31712310744741357,
+          0.35427844413837406
+        ]
+      }
+    },
+    "config": {
+      "epochs": 5,
+      "batch_size": 64,
+      "learning_rate": 0.001,
+      "hash_algorithm": "blake3",
+      "privacy_parameters": {
+        "target_epsilon": 1.0,
+        "target_delta": 1e-05,
+        "max_grad_norm": 1.0,
+        "noise_multiplier": 1.0
+      },
+      "blockchain": {
+        "enabled": true,
+        "networks": [
+          "ipfs",
+          "ethereum"
+        ],
+        "ipfs": {
+          "enabled": false,
+          "url": "http://localhost:5001",
+          "timeout": 30,
+          "retry_attempts": 3
+        },
+        "ethereum": {
+          "enabled": true,
+          "rpc_url": "http://127.0.0.1:8545",
+          "private_key": null,
+          "contract_address": null,
+          "gas_limit": 300000,
+          "gas_price": "auto"
+        },
+        "bitcoin": {
+          "enabled": false,
+          "rpc_url": "http://localhost:8332",
+          "private_key": null,
+          "network": "testnet",
+          "fee_rate": "medium"
+        },
+        "storage_options": {
+          "store_before_training": true,
+          "store_after_training": true,
+          "store_epoch_checkpoints": false,
+          "metadata_inclusion": {
+            "training_config": true,
+            "model_architecture": true,
+            "data_statistics": true,
+            "privacy_metrics": true,
+            "system_info": true
+          }
+        },
+        "verification": {
+          "verify_on_save": true,
+          "verify_on_load": true,
+          "cross_network_verification": false
+        }
+      }
+    }
+  },
+  "safety_metrics": {},
+  "epoch_metrics": [],
+  "hashes": {
+    "data": "ac43ba5c7a41420e05efda2728d54d7b4b9de1cf3eb6df49c0009495369dac85",
+    "model": "870330a9062947d855070b848adda0a888cda45ca5e5aa3b87cec945ecf93efe",
+    "training": "6f2bca7d67fa92e200b4c649c93cd96049a7d4e3678923d31f6513a3dcc2d502",
+    "root": "a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864"
+  },
+  "merkle_tree": {
+    "root_hash": "a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864",
+    "tree_file": "merkle_tree_20250623_194541.json",
+    "algorithm": "blake3"
+  },
+  "verification_report": {
+    "timestamp": "2025-06-23T19:45:46.138999",
+    "verification_status": "failed",
+    "components": {
+      "model": {
+        "model_exists": true,
+        "model_hash_match": false,
+        "model_merkle_verified": false,
+        "architecture_verified": true,
+        "model_progression_verified": false,
+        "mismatched_epochs": []
+      },
+      "data": {
+        "has_train_data": true,
+        "has_test_data": true,
+        "has_timestamp": true,
+        "hash_match": false,
+        "statistics_verified": false,
+        "merkle_verified": false,
+        "metadata_verified": false
+      },
+      "training": {
+        "final_metrics_present": true,
+        "training_logs_present": false,
+        "privacy_metrics_present": false,
+        "hash_present": false,
+        "timestamp_present": false,
+        "accuracy_present": false,
+        "loss_present": true,
+        "hash_match": false
+      }
+    },
+    "merkle_tree": {
+      "status": "invalid_structure",
+      "root_hash": null,
+      "proofs": {},
+      "is_valid": false,
+      "error": "No root hash found in Merkle tree"
+    }
+  },
+  "verification_status": "FAILED"
+}

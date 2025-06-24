@@ -1,0 +1,257 @@
+2025-06-23 19:31:21,633 - __main__ - INFO - Loaded blockchain configuration from: /Users/mukeshjoshi/gitprojects/mnist_provenance/configs/blockchain_config.json
+2025-06-23 19:31:21,633 - __main__ - INFO - ================================================================================
+2025-06-23 19:31:21,633 - __main__ - INFO - MNIST TRAINING WITH BLOCKCHAIN PROVENANCE TRACKING
+2025-06-23 19:31:21,633 - __main__ - INFO - ================================================================================
+2025-06-23 19:31:21,633 - __main__ - INFO - Training started at: 2025-06-23 19:31:21
+2025-06-23 19:31:21,633 - __main__ - INFO - Log file: artifacts/provenance/20250623_193121/training_run_log_20250623_193121.txt
+2025-06-23 19:31:21,633 - __main__ - INFO - ================================================================================
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Using hash algorithm from config: blake3
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Hash factory initialized with algorithm: blake3
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Algorithm: BLAKE3
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Digest size: 32 bytes
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Security level: high
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Speed: very_fast
+2025-06-23 19:31:21,633 - ml_provenance.provenance.hash_config - INFO - Recommended: True
+2025-06-23 19:31:21,633 - __main__ - INFO - Using hash algorithm: blake3
+2025-06-23 19:31:21,633 - __main__ - INFO - Algorithm info: {'name': 'BLAKE3', 'digest_size': 32, 'security_level': 'high', 'speed': 'very_fast', 'recommended': True}
+2025-06-23 19:31:21,633 - __main__ - INFO - Using device: cpu
+2025-06-23 19:31:21,633 - __main__ - INFO - Loading MNIST dataset...
+2025-06-23 19:31:21,727 - __main__ - INFO - Training data shape: (60000, 28, 28)
+2025-06-23 19:31:21,727 - __main__ - INFO - Test data shape: (10000, 28, 28)
+/Users/mukeshjoshi/gitprojects/mnist_provenance/src/ml_provenance/training/train.py:473: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:209.)
+  y_train_tensor = torch.from_numpy(y_train).long()
+2025-06-23 19:31:21,728 - __main__ - INFO - Tracking data provenance...
+2025-06-23 19:31:21,728 - ml_provenance.provenance.tracker - INFO - Tracking data provenance...
+2025-06-23 19:31:43,568 - ml_provenance.provenance.tracker - INFO - [TRACKER] data_info to be hashed: {'dataset': 'MNIST', 'timestamp': '20250623_193121', 'train': {'samples': 60000, 'mean': np.float32(0.13066062), 'std': np.float32(0.30810776), 'hash': 'a28c845a15b42c097ef176bc7391a91b2e16c3325f00e5b8db6e3ed416c982ab', 'metadata': {'statistics': {'mean': np.float32(0.13066062), 'std': np.float32(0.30810776), 'min': 0.0, 'max': 1.0, 'shape': [60000, 28, 28], 'dtype': 'float32'}}}, 'test': {'samples': 10000, 'mean': np.float32(0.13251467), 'std': np.float32(0.31048027), 'hash': '56783c614aa18159d2fbe215e087167cb6d35d8efc1b9f4e2fe20dfae7f435b3', 'metadata': {'statistics': {'mean': np.float32(0.13251467), 'std': np.float32(0.31048027), 'min': 0.0, 'max': 1.0, 'shape': [10000, 28, 28], 'dtype': 'float32'}}}}
+2025-06-23 19:31:43,569 - ml_provenance.provenance.tracker - INFO - [TRACKER] data hash: fc892ff83f4dec2d995d97b9f4b115db33aeea8e639fa074f3461ede7299b50a
+2025-06-23 19:31:43,569 - ml_provenance.provenance.tracker - INFO - Data provenance tracked successfully.
+2025-06-23 19:31:43,569 - __main__ - INFO - Creating model...
+2025-06-23 19:31:43,573 - __main__ - INFO - Tracking model provenance...
+2025-06-23 19:31:43,573 - ml_provenance.provenance.tracker - INFO - Tracking model architecture...
+2025-06-23 19:31:43,574 - ml_provenance.provenance.tracker - INFO - Model architecture tracked successfully.
+2025-06-23 19:31:43,574 - __main__ - INFO - Storing pre-training Merkle root hash on blockchain...
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Building provenance Merkle tree...
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: ac43ba5c7a41420e05efda2728d54d7b4b9de1cf3eb6df49c0009495369dac85
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 870330a9062947d855070b848adda0a888cda45ca5e5aa3b87cec945ecf93efe
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 76ab883f069841b22c446e21ab7c63f9f0af67b440ce4dff457d41e1a2ad17cf
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: f231ab2a3f87749887188397727ab0dbae4af6dccc636d85222b7b395307a073
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Provenance Merkle tree built successfully
+2025-06-23 19:31:43,574 - ml_provenance.provenance.merkle_tree - INFO - Root hash: f231ab2a3f87749887188397727ab0dbae4af6dccc636d85222b7b395307a073
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - INFO - DEBUG: store_merkle_hash called with networks: ['ipfs', 'ethereum']
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - INFO - DEBUG: Available interfaces: ['ethereum']
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - INFO - DEBUG: Using networks: ['ipfs', 'ethereum']
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - INFO - DEBUG: Processing network: ipfs
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - WARNING - Blockchain interface 'ipfs' not available
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - INFO - DEBUG: Processing network: ethereum
+2025-06-23 19:31:43,574 - ml_provenance.provenance.blockchain - INFO - DEBUG: Using interface: <class 'ml_provenance.provenance.blockchain.EthereumInterface'>
+2025-06-23 19:31:43,598 - ml_provenance.provenance.blockchain - ERROR - Failed to send Ethereum transaction: {'code': -32000, 'message': 'only replay-protected (EIP-155) transactions allowed over RPC'}
+2025-06-23 19:31:43,598 - ml_provenance.provenance.blockchain - INFO - [SIMULATION] Stored Merkle root hash on Ethereum: f231ab2a3f87749887188397727ab0dbae4af6dccc636d85222b7b395307a073
+2025-06-23 19:31:43,598 - ml_provenance.provenance.blockchain - INFO - [SIMULATION] Transaction ID: 7ff0960f104ab052
+2025-06-23 19:31:43,598 - ml_provenance.provenance.blockchain - INFO - Successfully stored hash on ethereum: 7ff0960f104ab052
+2025-06-23 19:31:43,598 - ml_provenance.provenance.blockchain - INFO - DEBUG: Final results: {'ethereum': '7ff0960f104ab052'}
+2025-06-23 19:31:43,598 - ml_provenance.provenance.blockchain - INFO - Stored pre-training Merkle root hash on blockchain
+2025-06-23 19:31:43,598 - ml_provenance.provenance.tracker - INFO - Stored pre-training Merkle root on blockchain: f231ab2a3f87749887188397727ab0dbae4af6dccc636d85222b7b395307a073
+2025-06-23 19:31:43,598 - __main__ - INFO - Pre-training hash stored on blockchain: {'ethereum': '7ff0960f104ab052'}
+2025-06-23 19:31:43,598 - __main__ - INFO - Initializing privacy engine...
+/Users/mukeshjoshi/gitprojects/mnist_provenance/venv/lib/python3.12/site-packages/opacus/privacy_engine.py:96: UserWarning: Secure RNG turned off. This is perfectly fine for experimentation as it allows for much faster training performance, but remember to turn it on and retrain one last time before production with ``secure_mode`` turned on.
+  warnings.warn(
+2025-06-23 19:31:43,600 - __main__ - INFO - Starting model training...
+2025-06-23 19:31:43,600 - __main__ - INFO - --------------------------------------------------
+/Users/mukeshjoshi/gitprojects/mnist_provenance/src/ml_provenance/training/train.py:207: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+  loss.backward()
+Epoch [1/5], Step [100/938], Loss: 2.2522, Accuracy: 17.98%
+Epoch [1/5], Step [200/938], Loss: 2.1637, Accuracy: 23.68%
+Epoch [1/5], Step [300/938], Loss: 1.9549, Accuracy: 29.74%
+Epoch [1/5], Step [400/938], Loss: 1.3977, Accuracy: 35.22%
+Epoch [1/5], Step [500/938], Loss: 1.2433, Accuracy: 39.06%
+Epoch [1/5], Step [600/938], Loss: 1.0170, Accuracy: 42.35%
+Epoch [1/5], Step [700/938], Loss: 1.1654, Accuracy: 45.15%
+Epoch [1/5], Step [800/938], Loss: 1.6761, Accuracy: 47.55%
+Epoch [1/5], Step [900/938], Loss: 0.8680, Accuracy: 49.61%
+Epoch [1/5], Loss: 1.5493, Train Accuracy: 0.5029, Test Accuracy: 0.8131
+2025-06-23 19:33:00,675 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: dc2a1025d25c35b15fbc5461d7310ad843041ff79b2a0fe600ba0da204f4c301
+2025-06-23 19:33:00,675 - ml_provenance.provenance.merkle_tree - INFO - Added epoch 1 node with hash: dc2a1025d25c35b15fbc5461d7310ad843041ff79b2a0fe600ba0da204f4c301
+Epoch [2/5], Step [100/938], Loss: 0.6240, Accuracy: 68.15%
+Epoch [2/5], Step [200/938], Loss: 1.3167, Accuracy: 68.35%
+Epoch [2/5], Step [300/938], Loss: 1.3727, Accuracy: 68.98%
+Epoch [2/5], Step [400/938], Loss: 1.0026, Accuracy: 69.11%
+Epoch [2/5], Step [500/938], Loss: 1.1104, Accuracy: 69.46%
+Epoch [2/5], Step [600/938], Loss: 1.3494, Accuracy: 69.70%
+Epoch [2/5], Step [700/938], Loss: 1.1589, Accuracy: 70.02%
+Epoch [2/5], Step [800/938], Loss: 0.5190, Accuracy: 70.34%
+Epoch [2/5], Step [900/938], Loss: 1.4800, Accuracy: 70.56%
+Epoch [2/5], Loss: 1.1721, Train Accuracy: 0.7065, Test Accuracy: 0.8621
+2025-06-23 19:34:17,548 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: e513bc34049235bda6cae7a739506ef0adf0deb65cd8ecec950b78a7ac2b51c8
+2025-06-23 19:34:17,548 - ml_provenance.provenance.merkle_tree - INFO - Added epoch 2 node with hash: e513bc34049235bda6cae7a739506ef0adf0deb65cd8ecec950b78a7ac2b51c8
+Epoch [3/5], Step [100/938], Loss: 1.3489, Accuracy: 72.97%
+Epoch [3/5], Step [200/938], Loss: 1.3936, Accuracy: 72.95%
+Epoch [3/5], Step [300/938], Loss: 1.1248, Accuracy: 73.28%
+Epoch [3/5], Step [400/938], Loss: 1.4623, Accuracy: 73.49%
+Epoch [3/5], Step [500/938], Loss: 1.9532, Accuracy: 73.55%
+Epoch [3/5], Step [600/938], Loss: 0.9875, Accuracy: 73.47%
+Epoch [3/5], Step [700/938], Loss: 1.0609, Accuracy: 73.63%
+Epoch [3/5], Step [800/938], Loss: 1.3540, Accuracy: 73.67%
+Epoch [3/5], Step [900/938], Loss: 1.2257, Accuracy: 73.69%
+Epoch [3/5], Loss: 1.2490, Train Accuracy: 0.7367, Test Accuracy: 0.8806
+2025-06-23 19:41:06,254 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 49738181b0c860d29630370ba229c09f8d80473c830e5bf38ec218fe6f55198c
+2025-06-23 19:41:06,254 - ml_provenance.provenance.merkle_tree - INFO - Added epoch 3 node with hash: 49738181b0c860d29630370ba229c09f8d80473c830e5bf38ec218fe6f55198c
+Epoch [4/5], Step [100/938], Loss: 1.4181, Accuracy: 73.98%
+Epoch [4/5], Step [200/938], Loss: 1.3745, Accuracy: 74.64%
+Epoch [4/5], Step [300/938], Loss: 1.0086, Accuracy: 74.48%
+Epoch [4/5], Step [400/938], Loss: 0.9373, Accuracy: 74.55%
+Epoch [4/5], Step [500/938], Loss: 1.6998, Accuracy: 74.86%
+Epoch [4/5], Step [600/938], Loss: 0.9644, Accuracy: 74.90%
+Epoch [4/5], Step [700/938], Loss: 1.4920, Accuracy: 74.95%
+Epoch [4/5], Step [800/938], Loss: 1.6417, Accuracy: 74.95%
+Epoch [4/5], Step [900/938], Loss: 1.5725, Accuracy: 74.91%
+Epoch [4/5], Loss: 1.3376, Train Accuracy: 0.7490, Test Accuracy: 0.8847
+2025-06-23 19:42:22,886 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 54898d477c9437ac5b03f7c59197763096880866475765dc36db42d410fa2650
+2025-06-23 19:42:22,886 - ml_provenance.provenance.merkle_tree - INFO - Added epoch 4 node with hash: 54898d477c9437ac5b03f7c59197763096880866475765dc36db42d410fa2650
+Epoch [5/5], Step [100/938], Loss: 1.0469, Accuracy: 75.35%
+Epoch [5/5], Step [200/938], Loss: 1.8362, Accuracy: 75.46%
+Epoch [5/5], Step [300/938], Loss: 1.6998, Accuracy: 75.56%
+Epoch [5/5], Step [400/938], Loss: 1.6134, Accuracy: 75.52%
+Epoch [5/5], Step [500/938], Loss: 0.9312, Accuracy: 75.54%
+Epoch [5/5], Step [600/938], Loss: 1.4151, Accuracy: 75.50%
+Epoch [5/5], Step [700/938], Loss: 1.0268, Accuracy: 75.51%
+Epoch [5/5], Step [800/938], Loss: 1.5268, Accuracy: 75.63%
+Epoch [5/5], Step [900/938], Loss: 1.3777, Accuracy: 75.59%
+Epoch [5/5], Loss: 1.3713, Train Accuracy: 0.7558, Test Accuracy: 0.8860
+2025-06-23 19:45:38,117 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 5ebed2b793096e17ee5ad96c8b117a418f5f7ad5459eaf9f5effee436ce797a2
+2025-06-23 19:45:38,117 - ml_provenance.provenance.merkle_tree - INFO - Added epoch 5 node with hash: 5ebed2b793096e17ee5ad96c8b117a418f5f7ad5459eaf9f5effee436ce797a2
+2025-06-23 19:45:38,117 - __main__ - INFO - --------------------------------------------------
+2025-06-23 19:45:38,117 - __main__ - INFO - Training completed!
+2025-06-23 19:45:38,126 - __main__ - INFO - Model saved to: artifacts/provenance/20250623_193121/model.pth
+2025-06-23 19:45:38,126 - __main__ - INFO - Building Merkle tree for provenance verification...
+2025-06-23 19:45:38,126 - ml_provenance.provenance.tracker - INFO - Starting training run tracking...
+2025-06-23 19:45:38,126 - ml_provenance.provenance.merkle_tree - INFO - Building provenance Merkle tree...
+2025-06-23 19:45:38,126 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: ac43ba5c7a41420e05efda2728d54d7b4b9de1cf3eb6df49c0009495369dac85
+2025-06-23 19:45:38,126 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 870330a9062947d855070b848adda0a888cda45ca5e5aa3b87cec945ecf93efe
+2025-06-23 19:45:39,942 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: 6f2bca7d67fa92e200b4c649c93cd96049a7d4e3678923d31f6513a3dcc2d502
+2025-06-23 19:45:41,750 - ml_provenance.provenance.merkle_tree - INFO - Added node with hash: a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864
+2025-06-23 19:45:41,751 - ml_provenance.provenance.merkle_tree - INFO - Provenance Merkle tree built successfully
+2025-06-23 19:45:41,751 - ml_provenance.provenance.merkle_tree - INFO - Root hash: a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864
+2025-06-23 19:45:41,751 - ml_provenance.provenance.tracker - INFO - Root hash: a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864
+2025-06-23 19:45:41,751 - ml_provenance.provenance.tracker - INFO - Training run tracking completed
+2025-06-23 19:45:45,096 - ml_provenance.provenance.tracker - INFO - Merkle tree dumped to artifacts/provenance/20250623_193121/merkle_tree_20250623_194541.json
+2025-06-23 19:45:45,152 - __main__ - INFO - Storing post-training Merkle root hash on blockchain...
+2025-06-23 19:45:45,152 - ml_provenance.provenance.tracker - INFO - Using existing Merkle tree with root hash: a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864
+2025-06-23 19:45:45,152 - ml_provenance.provenance.blockchain - INFO - DEBUG: store_merkle_hash called with networks: ['ipfs', 'ethereum']
+2025-06-23 19:45:45,152 - ml_provenance.provenance.blockchain - INFO - DEBUG: Available interfaces: ['ethereum']
+2025-06-23 19:45:45,152 - ml_provenance.provenance.blockchain - INFO - DEBUG: Using networks: ['ipfs', 'ethereum']
+2025-06-23 19:45:45,153 - ml_provenance.provenance.blockchain - INFO - DEBUG: Processing network: ipfs
+2025-06-23 19:45:45,153 - ml_provenance.provenance.blockchain - WARNING - Blockchain interface 'ipfs' not available
+2025-06-23 19:45:45,153 - ml_provenance.provenance.blockchain - INFO - DEBUG: Processing network: ethereum
+2025-06-23 19:45:45,153 - ml_provenance.provenance.blockchain - INFO - DEBUG: Using interface: <class 'ml_provenance.provenance.blockchain.EthereumInterface'>
+2025-06-23 19:45:45,163 - ml_provenance.provenance.blockchain - ERROR - Failed to send Ethereum transaction: {'code': -32000, 'message': 'only replay-protected (EIP-155) transactions allowed over RPC'}
+2025-06-23 19:45:45,164 - ml_provenance.provenance.blockchain - INFO - [SIMULATION] Stored Merkle root hash on Ethereum: a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864
+2025-06-23 19:45:45,164 - ml_provenance.provenance.blockchain - INFO - [SIMULATION] Transaction ID: 82aee2fe41e30014
+2025-06-23 19:45:45,164 - ml_provenance.provenance.blockchain - INFO - Successfully stored hash on ethereum: 82aee2fe41e30014
+2025-06-23 19:45:45,164 - ml_provenance.provenance.blockchain - INFO - DEBUG: Final results: {'ethereum': '82aee2fe41e30014'}
+2025-06-23 19:45:45,164 - ml_provenance.provenance.blockchain - INFO - Stored post-training Merkle root hash on blockchain
+2025-06-23 19:45:45,164 - ml_provenance.provenance.tracker - INFO - Stored post-training Merkle root on blockchain: a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864
+2025-06-23 19:45:45,164 - __main__ - INFO - Post-training hash stored on blockchain: {'ethereum': '82aee2fe41e30014'}
+2025-06-23 19:45:45,164 - ml_provenance.provenance.tracker - INFO - Saving provenance data...
+2025-06-23 19:45:45,164 - ml_provenance.provenance.tracker - INFO - Provenance data saved to artifacts/provenance/20250623_193121/provenance_report.json
+2025-06-23 19:45:45,164 - ml_provenance.provenance.tracker - INFO - Saving provenance data...
+2025-06-23 19:45:45,165 - ml_provenance.provenance.tracker - INFO - Provenance data saved to artifacts/provenance/20250623_193121/provenance_report.json
+2025-06-23 19:45:45,165 - __main__ - INFO - Provenance data saved to: artifacts/provenance/20250623_193121
+2025-06-23 19:45:45,165 - ml_provenance.provenance.blockchain - INFO - Verification on ethereum: SUCCESS
+2025-06-23 19:45:45,165 - ml_provenance.provenance.blockchain - INFO - Verification on ethereum: SUCCESS
+2025-06-23 19:45:45,165 - ml_provenance.provenance.blockchain - INFO - Blockchain report saved to: artifacts/provenance/20250623_193121/blockchain_report.json
+2025-06-23 19:45:45,165 - ml_provenance.provenance.tracker - INFO - Blockchain report saved to: artifacts/provenance/20250623_193121/blockchain_report.json
+2025-06-23 19:45:45,165 - __main__ - INFO - Blockchain report saved to: artifacts/provenance/20250623_193121/blockchain_report.json
+2025-06-23 19:45:45,165 - __main__ - INFO - Verifying blockchain provenance...
+2025-06-23 19:45:45,166 - __main__ - INFO - ============================================================
+2025-06-23 19:45:45,166 - __main__ - INFO - 🔍 BLOCKCHAIN VERIFICATION REPORT
+2025-06-23 19:45:45,166 - __main__ - INFO - ============================================================
+2025-06-23 19:45:45,167 - __main__ - INFO - 📊 Blockchain Configuration:
+2025-06-23 19:45:45,167 - __main__ - INFO -   Enabled: ✅
+2025-06-23 19:45:45,168 - __main__ - INFO -   Ethereum Enabled: ✅
+2025-06-23 19:45:45,168 - __main__ - INFO -   Private Key Set: ✅
+2025-06-23 19:45:45,168 - __main__ - INFO -   Ethereum Connection: ✅
+2025-06-23 19:45:45,168 - __main__ - INFO - 
+📊 Stored Hashes:
+2025-06-23 19:45:45,168 - __main__ - INFO -   before_training:
+2025-06-23 19:45:45,168 - __main__ - INFO -     Merkle Root: f231ab2a3f877498...
+2025-06-23 19:45:45,168 - __main__ - INFO -     Transaction IDs: {'ethereum': '7ff0960f104ab052'}
+2025-06-23 19:45:45,168 - __main__ - INFO -     ✅ Transactions found
+2025-06-23 19:45:45,168 - __main__ - INFO -   after_training:
+2025-06-23 19:45:45,168 - __main__ - INFO -     Merkle Root: a6a7ba35b0969b0a...
+2025-06-23 19:45:45,168 - __main__ - INFO -     Transaction IDs: {'ethereum': '82aee2fe41e30014'}
+2025-06-23 19:45:45,168 - __main__ - INFO -     ✅ Transactions found
+2025-06-23 19:45:45,168 - __main__ - INFO - 
+🔍 Verification Results:
+2025-06-23 19:45:45,168 - __main__ - INFO -   Chain Integrity: ✅
+2025-06-23 19:45:45,168 - __main__ - INFO -   Has Transactions: ✅
+2025-06-23 19:45:45,168 - __main__ - INFO - 
+🎉 BLOCKCHAIN VERIFICATION: SUCCESS ✅
+2025-06-23 19:45:45,168 - __main__ - INFO - ============================================================
+2025-06-23 19:45:45,168 - __main__ - INFO - Blockchain verification results: {'blockchain_enabled': True, 'has_transactions': True, 'chain_integrity': True, 'ethereum_connection': True, 'private_key_set': True, 'verification_status': 'success', 'ethereum_enabled': True}
+2025-06-23 19:45:45,168 - ml_provenance.provenance.blockchain - INFO - Verification on ethereum: SUCCESS
+2025-06-23 19:45:45,168 - ml_provenance.provenance.blockchain - INFO - Verification on ethereum: SUCCESS
+2025-06-23 19:45:45,168 - ml_provenance.provenance.tracker - INFO - Blockchain provenance verification completed
+2025-06-23 19:45:45,168 - __main__ - INFO - Blockchain status: {'blockchain_enabled': True, 'stored_hashes': {'before_training': {'merkle_root_hash': 'f231ab2a3f87749887188397727ab0dbae4af6dccc636d85222b7b395307a073', 'transaction_ids': {'ethereum': '7ff0960f104ab052'}, 'timestamp': '2025-06-23T19:31:43.598459'}, 'after_training': {'merkle_root_hash': 'a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864', 'transaction_ids': {'ethereum': '82aee2fe41e30014'}, 'timestamp': '2025-06-23T19:45:45.164160'}}, 'verification_results': {'before_training': {'ethereum': True}, 'after_training': {'ethereum': True}, 'chain_integrity': True, 'blockchain_enabled': True}, 'blockchain_config': {'enabled': True, 'networks': ['ipfs', 'ethereum'], 'ipfs': {'enabled': False, 'url': 'http://localhost:5001', 'timeout': 30, 'retry_attempts': 3}, 'ethereum': {'enabled': True, 'rpc_url': 'http://127.0.0.1:8545', 'private_key': None, 'contract_address': None, 'gas_limit': 300000, 'gas_price': 'auto'}, 'bitcoin': {'enabled': False, 'rpc_url': 'http://localhost:8332', 'private_key': None, 'network': 'testnet', 'fee_rate': 'medium'}, 'storage_options': {'store_before_training': True, 'store_after_training': True, 'store_epoch_checkpoints': False, 'metadata_inclusion': {'training_config': True, 'model_architecture': True, 'data_statistics': True, 'privacy_metrics': True, 'system_info': True}}, 'verification': {'verify_on_save': True, 'verify_on_load': True, 'cross_network_verification': False}}}
+2025-06-23 19:45:45,168 - __main__ - INFO - Running comprehensive blockchain verification...
+2025-06-23 19:45:45,168 - __main__ - INFO - ============================================================
+2025-06-23 19:45:45,168 - __main__ - INFO - 🔍 BLOCKCHAIN VERIFICATION REPORT
+2025-06-23 19:45:45,168 - __main__ - INFO - ============================================================
+2025-06-23 19:45:45,169 - __main__ - INFO - 📊 Blockchain Configuration:
+2025-06-23 19:45:45,169 - __main__ - INFO -   Enabled: ✅
+2025-06-23 19:45:45,169 - __main__ - INFO -   Ethereum Enabled: ✅
+2025-06-23 19:45:45,169 - __main__ - INFO -   Private Key Set: ✅
+2025-06-23 19:45:45,169 - __main__ - INFO -   Ethereum Connection: ✅
+2025-06-23 19:45:45,169 - __main__ - INFO - 
+📊 Stored Hashes:
+2025-06-23 19:45:45,169 - __main__ - INFO -   before_training:
+2025-06-23 19:45:45,169 - __main__ - INFO -     Merkle Root: f231ab2a3f877498...
+2025-06-23 19:45:45,169 - __main__ - INFO -     Transaction IDs: {'ethereum': '7ff0960f104ab052'}
+2025-06-23 19:45:45,169 - __main__ - INFO -     ✅ Transactions found
+2025-06-23 19:45:45,169 - __main__ - INFO -   after_training:
+2025-06-23 19:45:45,169 - __main__ - INFO -     Merkle Root: a6a7ba35b0969b0a...
+2025-06-23 19:45:45,169 - __main__ - INFO -     Transaction IDs: {'ethereum': '82aee2fe41e30014'}
+2025-06-23 19:45:45,169 - __main__ - INFO -     ✅ Transactions found
+2025-06-23 19:45:45,169 - __main__ - INFO - 
+🔍 Verification Results:
+2025-06-23 19:45:45,169 - __main__ - INFO -   Chain Integrity: ✅
+2025-06-23 19:45:45,170 - __main__ - INFO -   Has Transactions: ✅
+2025-06-23 19:45:45,170 - __main__ - INFO - 
+🎉 BLOCKCHAIN VERIFICATION: SUCCESS ✅
+2025-06-23 19:45:45,170 - __main__ - INFO - ============================================================
+2025-06-23 19:45:45,170 - __main__ - INFO - Running provenance verification...
+2025-06-23 19:45:45,170 - ml_provenance.provenance.verifier - INFO - Initialized ProvenanceVerifier with directory: artifacts/provenance/20250623_193121
+2025-06-23 19:45:45,170 - ml_provenance.provenance.verifier - INFO - Configuring verifier to use hash algorithm: blake3
+2025-06-23 19:45:45,170 - ml_provenance.provenance.hash_config - INFO - Hash factory initialized with algorithm: blake3
+2025-06-23 19:45:45,170 - ml_provenance.provenance.hash_config - INFO - Algorithm: BLAKE3
+2025-06-23 19:45:45,170 - ml_provenance.provenance.hash_config - INFO - Digest size: 32 bytes
+2025-06-23 19:45:45,170 - ml_provenance.provenance.hash_config - INFO - Security level: high
+2025-06-23 19:45:45,170 - ml_provenance.provenance.hash_config - INFO - Speed: very_fast
+2025-06-23 19:45:45,170 - ml_provenance.provenance.hash_config - INFO - Recommended: True
+2025-06-23 19:45:45,170 - ml_provenance.provenance.verifier - INFO - Loaded provenance data from provenance_report.json
+2025-06-23 19:45:46,138 - ml_provenance.provenance.verifier - INFO - Components loaded: ['data', 'model', 'training']
+2025-06-23 19:45:46,138 - ml_provenance.provenance.verifier - INFO - Components verified: ['model', 'data', 'training']
+2025-06-23 19:45:46,138 - __main__ - INFO - Generating final report...
+2025-06-23 19:45:46,138 - ml_provenance.provenance.verifier - INFO - Initialized ProvenanceVerifier with directory: artifacts/provenance/20250623_193121
+2025-06-23 19:45:46,139 - ml_provenance.provenance.verifier - INFO - Configuring verifier to use hash algorithm: blake3
+2025-06-23 19:45:46,139 - ml_provenance.provenance.hash_config - INFO - Hash factory initialized with algorithm: blake3
+2025-06-23 19:45:46,139 - ml_provenance.provenance.hash_config - INFO - Algorithm: BLAKE3
+2025-06-23 19:45:46,139 - ml_provenance.provenance.hash_config - INFO - Digest size: 32 bytes
+2025-06-23 19:45:46,139 - ml_provenance.provenance.hash_config - INFO - Security level: high
+2025-06-23 19:45:46,139 - ml_provenance.provenance.hash_config - INFO - Speed: very_fast
+2025-06-23 19:45:46,139 - ml_provenance.provenance.hash_config - INFO - Recommended: True
+2025-06-23 19:45:46,139 - ml_provenance.provenance.verifier - INFO - Loaded provenance data from provenance_report.json
+2025-06-23 19:45:47,101 - ml_provenance.provenance.verifier - INFO - Components loaded: ['data', 'model', 'training']
+2025-06-23 19:45:47,101 - ml_provenance.provenance.verifier - INFO - Components verified: ['model', 'data', 'training']
+2025-06-23 19:45:47,101 - __main__ - INFO - ================================================================================
+2025-06-23 19:45:47,102 - __main__ - INFO - TRAINING SUMMARY
+2025-06-23 19:45:47,102 - __main__ - INFO - ================================================================================
+2025-06-23 19:45:47,102 - __main__ - INFO - Final Test Accuracy: 0.8860
+2025-06-23 19:45:47,102 - __main__ - INFO - Final Train Accuracy: 0.7558
+2025-06-23 19:45:47,102 - __main__ - INFO - Final Loss: 1.3713
+2025-06-23 19:45:47,102 - __main__ - INFO - Privacy Epsilon: 0.3543
+2025-06-23 19:45:47,102 - __main__ - INFO - Model saved to: artifacts/provenance/20250623_193121/model.pth
+2025-06-23 19:45:47,102 - __main__ - INFO - Provenance saved to: artifacts/provenance/20250623_193121
+2025-06-23 19:45:47,102 - __main__ - INFO - Blockchain Verification: SUCCESS
+2025-06-23 19:45:47,102 - __main__ - INFO - Log file: artifacts/provenance/20250623_193121/training_run_log_20250623_193121.txt
+2025-06-23 19:45:47,102 - __main__ - INFO - Training completed at: 2025-06-23 19:45:47
+2025-06-23 19:45:47,102 - __main__ - INFO - ================================================================================

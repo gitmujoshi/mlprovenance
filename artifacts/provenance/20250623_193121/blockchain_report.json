@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-06-23T19:45:45.165475",
+  "stored_hashes": {
+    "before_training": {
+      "merkle_root_hash": "f231ab2a3f87749887188397727ab0dbae4af6dccc636d85222b7b395307a073",
+      "transaction_ids": {
+        "ethereum": "7ff0960f104ab052"
+      },
+      "timestamp": "2025-06-23T19:31:43.598459"
+    },
+    "after_training": {
+      "merkle_root_hash": "a6a7ba35b0969b0a419da9a5f93a0e6e7cef9c9d558127ba6f00316204441864",
+      "transaction_ids": {
+        "ethereum": "82aee2fe41e30014"
+      },
+      "timestamp": "2025-06-23T19:45:45.164160"
+    }
+  },
+  "verification_results": {
+    "before_training": {
+      "ethereum": true
+    },
+    "after_training": {
+      "ethereum": true
+    },
+    "chain_integrity": true
+  },
+  "blockchain_config": {
+    "enabled": true,
+    "networks": [
+      "ipfs",
+      "ethereum"
+    ],
+    "ipfs": {
+      "enabled": false,
+      "url": "http://localhost:5001",
+      "timeout": 30,
+      "retry_attempts": 3
+    },
+    "ethereum": {
+      "enabled": true,
+      "rpc_url": "http://127.0.0.1:8545",
+      "private_key": null,
+      "contract_address": null,
+      "gas_limit": 300000,
+      "gas_price": "auto"
+    },
+    "bitcoin": {
+      "enabled": false,
+      "rpc_url": "http://localhost:8332",
+      "private_key": null,
+      "network": "testnet",
+      "fee_rate": "medium"
+    },
+    "storage_options": {
+      "store_before_training": true,
+      "store_after_training": true,
+      "store_epoch_checkpoints": false,
+      "metadata_inclusion": {
+        "training_config": true,
+        "model_architecture": true,
+        "data_statistics": true,
+        "privacy_metrics": true,
+        "system_info": true
+      }
+    },
+    "verification": {
+      "verify_on_save": true,
+      "verify_on_load": true,
+      "cross_network_verification": false
+    }
+  },
+  "transaction_info": {
+    "ethereum": {
+      "transaction_id": "82aee2fe41e30014",
+      "network": "ethereum",
+      "status": "confirmed",
+      "timestamp": 1750722345
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+    "timestamp": "2024-03-15T16:07:16",
+    "training_config": {
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 0.0001,
+        "max_input_length": 512,
+        "max_output_length": 1024
+    },
+    "safety_config": {
+        "min_age_rating": "TEEN",
+        "max_input_length": 512,
+        "max_output_length": 1024,
+        "content_filters": ["inappropriate", "sensitive", "explicit"],
+        "block_sensitive_topics": true,
+        "require_content_warning": true
+    },
+    "safety_metrics": {
+        "total_checks": 15000,
+        "passed_checks": 14250,
+        "failed_checks": 750,
+        "content_warnings": 320,
+        "sensitive_topics_detected": {
+            "violence": 120,
+            "explicit": 85,
+            "discrimination": 45,
+            "harmful": 30,
+            "inappropriate": 25
+        },
+        "filter_violations": {
+            "inappropriate_content": 180,
+            "sensitive_topic": 150,
+            "explicit_language": 95,
+            "harmful_content": 85,
+            "discriminatory_content": 65
+        }
+    },
+    "summary": {
+        "total_checks": 15000,
+        "pass_rate": 0.95,
+        "content_warnings": 320,
+        "most_common_sensitive_topics": [
+            ["violence", 120],
+            ["explicit", 85],
+            ["discrimination", 45]
+        ],
+        "most_common_filter_violations": [
+            ["inappropriate_content", 180],
+            ["sensitive_topic", 150],
+            ["explicit_language", 95]
+        ]
+    },
+    "epoch_metrics": [
+        {
+            "epoch": 1,
+            "average_loss": 2.345,
+            "total_batches": 500,
+            "safety_metrics": {
+                "total_checks": 5000,
+                "passed_checks": 4700,
+                "content_warnings": 120
+            }
+        },
+        {
+            "epoch": 2,
+            "average_loss": 1.987,
+            "total_batches": 500,
+            "safety_metrics": {
+                "total_checks": 5000,
+                "passed_checks": 4800,
+                "content_warnings": 100
+            }
+        },
+        {
+            "epoch": 3,
+            "average_loss": 1.765,
+            "total_batches": 500,
+            "safety_metrics": {
+                "total_checks": 5000,
+                "passed_checks": 4750,
+                "content_warnings": 100
+            }
+        }
+    ],
+    "model_provenance": {
+        "model_name": "gpt2",
+        "model_type": "GPT2LMHeadModel",
+        "device": "cuda",
+        "safety_config": {
+            "min_age_rating": "TEEN",
+            "max_input_length": 512,
+            "max_output_length": 1024
+        }
+    },
+    "data_provenance": {
+        "dataset_name": "wikitext-2-raw-v1",
+        "sample_size": 15000,
+        "batch_size": 32,
+        "total_examples": 15000
+    }
+} 
